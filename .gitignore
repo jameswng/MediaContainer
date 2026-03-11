@@ -1,0 +1,43 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.class
+
+# OS-specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editor-specific
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Local Environment & Binaries
+.bin/
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project-specific temporary/test files
+.stuff/
+*.working
+tmp_*/
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+tools/bin/finder_sort
+FULL_SESSION_HISTORY.log*

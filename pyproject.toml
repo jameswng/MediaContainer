@@ -1,0 +1,9 @@
+[project]
+name = "m5"
+version = "0.1.0"
+description = "Identify, group, extract, and play media objects from a directory"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+m5 = "m5.cli:main"
