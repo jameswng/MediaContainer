@@ -1,20 +1,43 @@
-# m5 — Architecture Document
+# MediaContainer — Architecture Document
 
 > Single source of truth for project design. All implementation should follow this document.
 
 ## Core Principles
 
-### 1. Self-Documenting Source Headers
+### 1. Modern Technical Excellence
+The codebase must represent the current state of the art in Python development. This is a zero-tolerance mandate applied continuously:
+- **Python 3.11+**: Utilize modern features like structural pattern matching, advanced type hinting, and `asyncio` where appropriate.
+- **Type Safety**: All new code MUST be fully type-hinted and pass `mypy` or `pyright` checks.
+- **Modern Standards**: Prefer `pathlib` over `os.path`, `pytest` for testing, and `ruff` for linting/formatting.
+- **Eliminate Legacy**: No `setup.py`, no old-style classes, no manual string formatting (use f-strings).
+
+### 2. Self-Documenting Source Headers
 Every source file MUST begin with a comprehensive header block that details:
 - **Calling API**: The intended interface and external dependencies.
 - **Algorithmic Methodology**: The logic or mathematical approach used (e.g., natural sorting, pipe chaining).
 - **Program Flow**: A high-level trace of how the file executes from entry to exit.
 
-### 2. Self-Locating Executables
+### 3. Self-Locating Executables
 Every executable script in `bin/` must be context-independent. It MUST resolve its own absolute physical path at runtime to programmatically locate and inject the project's internal `lib/` directory into its environment. This guarantees that the tool correctly imports project modules regardless of its execution context, working directory, or whether it was invoked via a symlink.
 
-### 3. Standardized Help Options
+### 4. Standardized Help Options
 Any command that can be run standalone, such as tools, apps, and tests, MUST provide a `-h` or `--help` option to display usage information and available arguments.
+
+### 5. Automated Continuous Versioning
+The project uses a Semantic Versioning (SemVer) strategy where the **Patch** version (e.g., 0.1.x) is automatically advanced by the build system every time a change is compiled or tested via the `Makefile`.
+
+---
+
+## Automation & Environment Standards
+
+### Clean Shell
+Every shell invocation MUST start with no profile or rc files loaded. Use `/bin/bash --noprofile --norc`. Bare `bash`, `zsh`, and `/bin/sh` are forbidden in automation contexts.
+
+### Strict PATH
+The execution environment is restricted to `/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin`. No additional directories. `export PATH` must be set explicitly in the `Makefile` and any automation scripts.
+
+### Makefile Lifecycle
+Clean, build, test, and versioning are managed via a state-aware `Makefile`.
 
 ---
 
@@ -320,7 +343,7 @@ Extract hardcoded stem peeling/stripping rules into a configurable, declarative 
 ## Module Structure
 
 ```
-m5/
+mediacontainer/
 ├── media_container.py  — MediaContainer class (standalone library)
 ```
 

@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from m5.media_container import ClassifiedFile, FileType, MediaContainer
+from mediacontainer.media_container import ClassifiedFile, FileType, MediaContainer
+
 
 
 # ---------------------------------------------------------------------------

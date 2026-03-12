@@ -1,4 +1,21 @@
-"""CLI entry point for m5."""
+"""
+# MediaContainer — CLI Entry Point
+
+## Calling API
+- `main(argv: list[str] | None = None) -> None`: Entry point for the MediaContainer CLI.
+
+## Algorithmic Methodology
+- Parses command line arguments using `argparse`.
+- Orchestrates the scanning, grouping, and (future) extraction/playback phases.
+- Provides a human-readable summary of identified media containers.
+
+## Program Flow
+1. Parse arguments (directory, dry-run).
+2. Resolve the target directory.
+3. Invoke `group_files` to identify media containers.
+4. Display a structured list of containers and their contents.
+5. (Planned) Trigger extraction and playback.
+"""
 
 from __future__ import annotations
 
@@ -6,12 +23,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from .grouper import group_files
+from .media_container import mediacontainer
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="m5",
+        prog="mediacontainer",
         description="Identify, group, extract, and play media objects from a directory.",
     )
     parser.add_argument(
@@ -33,17 +50,18 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Error: {directory} is not a directory", file=sys.stderr)
         sys.exit(1)
 
-    media_objects = group_files(directory)
+    paths = sorted(f for f in directory.iterdir() if f.is_file())
+    media_containers = MediaContainer.from_paths(paths)
 
-    if not media_objects:
+    if not media_containers:
         print("No files found.")
         sys.exit(0)
 
-    print(f"Found {len(media_objects)} media object(s) in {directory.name}/\n")
+    print(f"Found {len(media_containers)} media container(s) in {directory.name}/\n")
 
-    for i, mo in enumerate(media_objects, 1):
-        print(f"  [{i}] {mo.name}")
-        for f in mo.files:
+    for i, mc in enumerate(media_containers, 1):
+        print(f"  [{i}] {mc.name}")
+        for f in mc.files:
             marker = "  "
             if f.file_type.name in ("ARCHIVE", "SPLIT_ARCHIVE"):
                 marker = "📦"
@@ -55,7 +73,7 @@ def main(argv: list[str] | None = None) -> None:
                 marker = "🔧"
             print(f"      {marker} {f.name}  ({f.file_type.name.lower()})")
 
-        if mo.needs_extraction:
+        if mc.needs_extraction:
             print(f"      → needs extraction")
         print()
 

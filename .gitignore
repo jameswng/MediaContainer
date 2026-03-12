@@ -2,6 +2,14 @@
 __pycache__/
 *.py[cod]
 *.class
+*.egg-info/
+*.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.tox/
 
 # OS-specific
 .DS_Store
@@ -38,6 +46,8 @@ tmp_*/
 # Build artifacts
 dist/
 build/
-*.egg-info/
 tools/bin/finder_sort
 FULL_SESSION_HISTORY.log*
+
+# Claude/AI
+.claude/
