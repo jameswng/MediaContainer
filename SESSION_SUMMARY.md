@@ -16,7 +16,7 @@
     - Cleaned and formatted codebase with `ruff`.
 - **Core Library Implementation**:
     - Consolidated classification and grouping logic into `mediacontainer/media_container.py`.
-    - Implemented **Longest Common Prefix (LCP)** grouping for related files (e.g., image sets).
+    - Implemented **longest common prefix** grouping for related files (e.g., image sets).
     - Added **Scrambled Filename Detection** for obfuscated hash-based releases.
     - Implemented **Unaffiliated Catch-all** for orphaned files.
     - Refined list assignment (playable, sample, artwork, archives, etc.) and sorting rules.

@@ -1,16 +1,20 @@
-"""Regression tests for MediaContainer.
+"""
+# MediaContainer — Regression Tests
 
-Runs against .dir fixture files (text files listing filenames, one per line)
-or actual directories containing files. Each fixture has a corresponding
-expected result defined in EXPECTATIONS below.
+## Calling API
+- `pytest tests/test_regression.py`: Execute regression tests against file listing
+  fixtures in `tests/fixtures/`.
 
-To add a new regression test:
-1. Create a .dir file in tests/fixtures/ OR point to a real directory
-2. Add an entry to EXPECTATIONS with the expected outcome
-3. Run pytest
+## Algorithmic Methodology
+- **Fixture-based Testing**: Reads `.dir` files containing lists of filenames.
+- **Expectation Matching**: Compares identified containers and their attributes
+  against the `EXPECTATIONS` dictionary.
 
-The .dir format is one filename per line. Blank lines and lines starting
-with # are ignored.
+## Program Flow
+1. Load fixtures from `tests/fixtures/`.
+2. For each fixture, convert filenames to `Path` objects.
+3. Invoke `MediaContainer.from_paths`.
+4. Validate that the number of containers and their specific attributes match `EXPECTATIONS`.
 """
 
 from __future__ import annotations
@@ -257,6 +261,13 @@ def test_regression(fixture_name: str, fixture_path: Path):
 
     # Run classification and grouping
     containers = MediaContainer.from_paths(paths)
+
+    # NEW: Verify all input files are accounted for in the containers
+    assigned_paths = {f.path for mc in containers for f in mc.files}
+    assert len(assigned_paths) == len(paths), (
+        f"Input files ({len(paths)}) and assigned files ({len(assigned_paths)}) mismatch. "
+        f"Missing: {set(paths) - assigned_paths}"
+    )
 
     # Check container count
     assert len(containers) == expected.container_count, (

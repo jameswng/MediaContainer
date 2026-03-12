@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""
+# MediaContainer — Installation Tool
+
+## Calling API
+- `bin/install [-d DEST_DIR] [-n EXE_NAME]`: 
+  Installs a self-locating symlink to the MediaContainer CLI.
+  Defaults: DEST_DIR=~/.bin, EXE_NAME=mediacontainer
+
+## Algorithmic Methodology
+- **Path Resolution**: Programmatically determines the project root and 
+  the actual CLI implementation script.
+- **Symlink Creation**: Creates a symbolic link from the destination 
+  to the project's internal executable.
+- **Environment Validation**: Checks if the destination directory is in 
+  the user's PATH and provides a warning if not.
+- **Environment-Clean Safe**: Ensures that the generated executable 
+  runs in a clean environment via `env -i`.
+
+## Program Flow
+1. Parse command-line arguments for destination directory and executable name.
+2. Resolve absolute paths for the source and destination.
+3. Ensure the destination directory exists.
+4. Create (or update) the symbolic link.
+5. Verify PATH configuration and report success.
+"""
+
+import os
+import sys
+import argparse
+from pathlib import Path
+
+# --- Self-Locating Executable ---
+# Resolve absolute physical path and inject project root into environment
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+# --- Constants ---
+DEFAULT_DEST = Path.home() / ".bin"
+DEFAULT_NAME = "mediacontainer"
+PROJECT_ROOT = ROOT
+SOURCE_EXE = PROJECT_ROOT / "bin" / "mediacontainer"
+
+# Strict PATH from Architecture Document
+STRICT_PATH = "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin"
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Install a symlink to the MediaContainer CLI."
+    )
+    parser.add_argument(
+        "-d", "--dest", 
+        type=Path, 
+        default=DEFAULT_DEST,
+        help=f"Destination directory (default: {DEFAULT_DEST})"
+    )
+    parser.add_argument(
+        "-n", "--name", 
+        default=DEFAULT_NAME,
+        help=f"Executable name (default: {DEFAULT_NAME})"
+    )
+    args = parser.parse_args()
+
+    dest_dir = args.dest.expanduser().resolve()
+    dest_path = dest_dir / args.name
+
+    # 1. Ensure internal bin/mediacontainer exists as the symlink target
+    # This wrapper ensures Environment-Clean Safety
+    if not SOURCE_EXE.exists():
+        print(f"🚀 Creating environment-clean source executable at {SOURCE_EXE}...")
+        SOURCE_EXE.parent.mkdir(parents=True, exist_ok=True)
+        
+        # We use a shell wrapper to invoke python in a clean environment
+        content = [
+            "#!/bin/bash",
+            "# MediaContainer Environment-Clean Safe Wrapper",
+            f"export PATH=\"{STRICT_PATH}\"",
+            f"exec env -i HOME=\"$HOME\" USER=\"$USER\" TERM=\"$TERM\" PATH=\"$PATH\" \\",
+            f"    /opt/homebrew/bin/python3.13 -c \"",
+            "import sys",
+            "from pathlib import Path",
+            f"ROOT = Path('{PROJECT_ROOT}').resolve()",
+            "if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))",
+            "from mediacontainer.cli import main",
+            "if __name__ == '__main__': main()\"",
+            " \"$@\""
+        ]
+        SOURCE_EXE.write_text("\n".join(content) + "\n")
+        SOURCE_EXE.chmod(0o755)
+
+    # 2. Ensure destination directory exists
+    if not dest_dir.exists():
+        print(f"📁 Creating destination directory: {dest_dir}")
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # 3. Create symlink
+    if dest_path.exists() or dest_path.is_symlink():
+        print(f"🔄 Removing existing file at {dest_path}")
+        dest_path.unlink()
+
+    print(f"🔗 Linking {dest_path} -> {SOURCE_EXE}")
+    os.symlink(SOURCE_EXE, dest_path)
+
+    # 4. PATH Check
+    path_env = os.environ.get("PATH", "").split(os.pathsep)
+    if str(dest_dir) not in path_env:
+        print(f"\n⚠️  WARNING: {dest_dir} is not in your PATH.")
+        print(f"   Add this to your shell profile (e.g., .zshrc or .bashrc):")
+        print(f"   export PATH=\"$PATH:{dest_dir}\"")
+    else:
+        print(f"\n✅ Success! You can now run '{args.name}' from any directory.")
+
+if __name__ == "__main__":
+    main()

@@ -10,7 +10,7 @@
 ## Algorithmic Methodology
 - **Stem Extraction**: Iterative right-to-left peeling of recognized suffixes
   (split, volume, extension) and stripping of qualifiers.
-- **Grouping**: Longest Common Prefix (LCP) clustering on normalized stems.
+- **Grouping**: longest common prefix clustering on normalized stems.
 - **Scrambled Detection**: Identifies obfuscated filenames by extension patterns.
 - **List Assignment**: Distributes files into content-specific lists (playable,
   archives, artwork, etc.) based on classification and naming.
@@ -18,7 +18,8 @@
 ## Program Flow
 1. Receive a list of `Path` objects.
 2. For each path, create a `ClassifiedFile` (peel suffixes, strip qualifiers).
-3. Group the `ClassifiedFile` objects by their normalized stems (LCP).
+3. Group the `ClassifiedFile` objects by their normalized stems using a longest
+   common prefix algorithm.
 4. For each group, create a `MediaContainer`.
 5. Populate container content lists and detect primary archive/extraction tool.
 6. Identify and group scrambled filenames if present.
@@ -241,8 +242,8 @@ class MediaContainer:
         proper_files = [f for f in remaining if f.file_type != FileType.OTHER]
         others = [f for f in remaining if f.file_type == FileType.OTHER]
         
-        # 2. Group proper files by LCP
-        lcp_groups = cls._get_lcp_groups(proper_files)
+        # 2. Group proper files by longest common prefix
+        prefix_groups = cls._get_longest_common_prefix_groups(proper_files)
         
         # 3. Create containers
         containers: list[MediaContainer] = []
@@ -252,8 +253,8 @@ class MediaContainer:
             mc = cls(name=group[0].stem, files=group, scrambled=True)
             containers.append(mc)
             
-        # LCP containers
-        for group_name, group in lcp_groups.items():
+        # longest common prefix containers
+        for group_name, group in prefix_groups.items():
             mc = cls(name=group_name, files=group)
             containers.append(mc)
 
@@ -343,7 +344,7 @@ class MediaContainer:
         return len(stem) >= 20
 
     @staticmethod
-    def _get_lcp_groups(files: list[ClassifiedFile]) -> dict[str, list[ClassifiedFile]]:
+    def _get_longest_common_prefix_groups(files: list[ClassifiedFile]) -> dict[str, list[ClassifiedFile]]:
         if not files:
             return {}
             
@@ -354,17 +355,17 @@ class MediaContainer:
             current_group = [sorted_files[0]]
             for f in sorted_files[1:]:
                 prev_f = current_group[-1]
-                lcp = MediaContainer._calculate_lcp(prev_f.stem, f.stem)
+                prefix = MediaContainer._calculate_longest_common_prefix(prev_f.stem, f.stem)
                 
                 significant = False
-                lcp_len = len(lcp)
+                prefix_len = len(prefix)
                 max_len = max(len(prev_f.stem), len(f.stem))
                 
                 # Significance: shared prefix must be at least 70% of the stems
                 # OR be a full stem (prefix matching)
-                if lcp_len >= 0.7 * max_len:
+                if prefix_len >= 0.7 * max_len:
                     significant = True
-                elif lcp == prev_f.stem or lcp == f.stem:
+                elif prefix == prev_f.stem or prefix == f.stem:
                     significant = True
                 
                 if significant:
@@ -377,11 +378,11 @@ class MediaContainer:
         result = {}
         for group in groups:
             stems = [f.stem for f in group]
-            lcp = stems[0]
+            prefix = stems[0]
             for s in stems[1:]:
-                lcp = MediaContainer._calculate_lcp(lcp, s)
+                prefix = MediaContainer._calculate_longest_common_prefix(prefix, s)
             
-            group_name = re.sub(r"[\s\d\-_.]+$", "", lcp).strip()
+            group_name = re.sub(r"[\s\d\-_.]+$", "", prefix).strip()
             if not group_name:
                 group_name = stems[0]
             
@@ -390,14 +391,14 @@ class MediaContainer:
         return result
 
     @staticmethod
-    def _calculate_lcp(s1: str, s2: str) -> str:
-        lcp = ""
+    def _calculate_longest_common_prefix(s1: str, s2: str) -> str:
+        prefix = ""
         for c1, c2 in zip(s1, s2):
             if c1 == c2:
-                lcp += c1
+                prefix += c1
             else:
                 break
-        return lcp
+        return prefix
 
     def _assign_lists(self):
         for f in self.files:

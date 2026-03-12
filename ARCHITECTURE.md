@@ -9,6 +9,7 @@ The codebase must represent the current state of the art in Python development. 
 - **Python 3.11+**: Utilize modern features like structural pattern matching, advanced type hinting, and `asyncio` where appropriate.
 - **Type Safety**: All new code MUST be fully type-hinted and pass `mypy` or `pyright` checks.
 - **Modern Standards**: Prefer `pathlib` over `os.path`, `pytest` for testing, and `ruff` for linting/formatting.
+- **Environment-Clean Safe**: Scripts and execs of script interpreters MUST be environment clean safe and use the appropriate methods to do so (such as `env -i`). They should not rely on the user's personal environment variables (e.g., `PYTHONPATH`, `LD_LIBRARY_PATH`) and MUST use a controlled environment to ensure a predictable execution state. Homebrew bin/sbin directories are considered safe for this context.
 - **Eliminate Legacy**: No `setup.py`, no old-style classes, no manual string formatting (use f-strings).
 
 ### 2. Self-Documenting Source Headers
@@ -34,7 +35,10 @@ The project uses a Semantic Versioning (SemVer) strategy where the **Patch** ver
 Every shell invocation MUST start with no profile or rc files loaded. Use `/bin/bash --noprofile --norc`. Bare `bash`, `zsh`, and `/bin/sh` are forbidden in automation contexts.
 
 ### Strict PATH
-The execution environment is restricted to `/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin`. No additional directories. `export PATH` must be set explicitly in the `Makefile` and any automation scripts.
+The execution environment is restricted to a set of known-safe system and package manager directories:
+`/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin`
+
+No additional directories (like user-local `bin` or project-relative paths) are permitted in the base execution `PATH`. `export PATH` must be set explicitly in the `Makefile` and any automation scripts.
 
 ### Makefile Lifecycle
 Clean, build, test, and versioning are managed via a state-aware `Makefile`.
@@ -161,8 +165,8 @@ stem.nzb              → peel .nzb (ext)                             → stem: 
 **Core assumption:** All files sharing a stem or similar stem are affiliated.
 
 1. Compute normalized stem for every file.
-2. Group by **longest common prefix** (**LCP** — the longest string that two or more stems share from the start) on normalized stems. This handles the majority of cases (95–99% accuracy target).
-3. For difficult cases where LCP is insufficient, apply secondary heuristics (e.g., SequenceMatcher similarity). Edge cases will be addressed as they occur — 100% accuracy is not a goal.
+2. Group by **longest common prefix** (the longest string that two or more stems share from the start) on normalized stems. This handles the majority of cases (95–99% accuracy target).
+3. For difficult cases where longest common prefix is insufficient, apply secondary heuristics (e.g., SequenceMatcher similarity). Edge cases will be addressed as they occur — 100% accuracy is not a goal.
 4. Generic accessory names (`front.jpg`, `back.jpg`, `cover.jpg`, `index.jpg`, etc.) attach to the dominant group. These can appear in any type of media container — video releases, image sets, etc.
 5. If only one group emerges, treat everything as one media container.
 6. **Image sets** are media containers like any other. They may include their own accessory files (front, back, cover, index, clean versions, etc.).
@@ -180,7 +184,7 @@ Once files are grouped into a media container, each file is sorted into the appr
 
 ### Scrambled Filename Detection
 
-When stems cannot be grouped by LCP or similarity because they are obfuscated (hashes, random strings), detect and group by extension pattern instead.
+When stems cannot be grouped by longest common prefix or similarity because they are obfuscated (hashes, random strings), detect and group by extension pattern instead.
 
 **Detection criteria** (all must be true for a cluster of files):
 - Stems are all the **same length**
@@ -333,7 +337,7 @@ For outlier grouping disambiguation when filename-based heuristics are insuffici
 - **Keyframe extraction** (video): pull a few frames (first, middle, end) via ffmpeg, then apply any of the above image techniques to compare videos.
 - **Average luminance/contrast**: coarse but cheap — compare mean brightness and standard deviation across images.
 
-### Rule DSL
+### Declarative Rule Configuration
 Extract hardcoded stem peeling/stripping rules into a configurable, declarative format. Possible approaches:
 
 - **Config-driven rules**: define peel/strip patterns in YAML, TOML, or a Python dict. A generic processor iterates and applies them.

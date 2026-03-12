@@ -1,4 +1,21 @@
-"""Unit tests for MediaContainer module."""
+"""
+# MediaContainer — Unit Tests for MediaContainer module.
+
+## Calling API
+- `pytest tests/test_media_container.py`: Execute unit tests for file classification,
+  stem extraction, and grouping.
+
+## Algorithmic Methodology
+- **TestStemExtraction**: Parametrized tests for peeling and stripping suffixes.
+- **TestFileClassification**: Verifies correct `FileType` and attribute assignment.
+- **TestGrouping**: Validates longest common prefix-based clustering of files into containers.
+- **TestScrambledDetection**: Confirms obfuscated filename patterns are correctly handled.
+
+## Program Flow
+1. Sets up test data and expected outcomes.
+2. Exercises `MediaContainer.from_paths` and lower-level classification methods.
+3. Compares actual results against expectations using standard `pytest` assertions.
+"""
 
 from pathlib import Path
 

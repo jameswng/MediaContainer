@@ -49,5 +49,8 @@ build/
 tools/bin/finder_sort
 FULL_SESSION_HISTORY.log*
 
-# Claude/AI
+# AI Context
 .claude/
+.claudeignore
+.geminiignore
+.gemini/

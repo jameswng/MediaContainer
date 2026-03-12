@@ -1,0 +1,12 @@
+#!/bin/bash
+# MediaContainer Environment-Clean Safe Wrapper
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin"
+exec env -i HOME="$HOME" USER="$USER" TERM="$TERM" PATH="$PATH" \
+    /opt/homebrew/bin/python3.13 -c "
+import sys
+from pathlib import Path
+ROOT = Path('/Volumes/real-home/local-home/iam/Work/ai/MediaContainer').resolve()
+if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
+from mediacontainer.cli import main
+if __name__ == '__main__': main()"
+ "$@"
