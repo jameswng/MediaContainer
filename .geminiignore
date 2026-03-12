@@ -1,0 +1,59 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.class
+*.egg-info/
+*.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.tox/
+
+# OS-specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editor-specific
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Local Environment & Binaries
+.bin/
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Git
+.git/
+
+# Project-specific temporary/test files
+.stuff/
+*.working
+tmp_*/
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Build artifacts
+dist/
+build/
+tools/bin/finder_sort
+FULL_SESSION_HISTORY.log*
+
+# AI Context
+.claude/
+.claudeignore
+.geminiignore
+.gemini/

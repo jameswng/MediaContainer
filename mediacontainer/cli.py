@@ -23,7 +23,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from .media_container import mediacontainer
+from .media_container import MediaContainer
+
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -71,10 +72,10 @@ def main(argv: list[str] | None = None) -> None:
                 marker = "🖼 "
             elif f.file_type.name in ("PAR", "PAR2"):
                 marker = "🔧"
-            print(f"      {marker} {f.name}  ({f.file_type.name.lower()})")
+            print(f"      {marker} {f.path.name}  ({f.file_type.name.lower()})")
 
         if mc.needs_extraction:
-            print(f"      → needs extraction")
+            print("      → needs extraction")
         print()
 
     if args.dry_run:

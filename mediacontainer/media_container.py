@@ -101,9 +101,8 @@ class ClassifiedFile:
         ext = path.suffix.lower()
 
         # Handle compound extensions like .rar.001
-        current_split = None
-        if RE_SPLIT.search(lower_name):
-            current_split = RE_SPLIT.search(lower_name).group()
+        if (m := RE_SPLIT.search(lower_name)):
+            m.group()
             file_type = FileType.SPLIT_FILE
             # If it's something.rar.001, we want the .rar too
             remaining = filename[:-4]
@@ -135,8 +134,8 @@ class ClassifiedFile:
         while True:
             changed = False
             # Split
-            if not found_split and RE_SPLIT.search(peeled_name):
-                found_split = RE_SPLIT.search(peeled_name).group()
+            if not found_split and (m := RE_SPLIT.search(peeled_name)):
+                found_split = m.group()
                 peeled_name = peeled_name[:-len(found_split)]
                 changed = True
                 continue
@@ -334,9 +333,12 @@ class MediaContainer:
 
     @staticmethod
     def _is_scrambled_stem(stem: str) -> bool:
-        if not stem: return False
-        if any(c in " _-" for c in stem): return False
-        if not stem.isalnum(): return False
+        if not stem:
+            return False
+        if any(c in " _-" for c in stem):
+            return False
+        if not stem.isalnum():
+            return False
         # Heuristic: long hash-like strings
         return len(stem) >= 20
 
@@ -462,12 +464,16 @@ class MediaContainer:
                 return "unrar"
             return None
         ext = pa.extension.lower()
-        if ext == ".rar": return "unrar"
-        if ext == ".zip": return "unzip"
-        if ext == ".7z": return "7z"
+        if ext == ".rar":
+            return "unrar"
+        if ext == ".zip":
+            return "unzip"
+        if ext == ".7z":
+            return "7z"
         if pa.split == ".001":
             # Check what's before .001
-            if ".rar" in pa.path.name.lower(): return "unrar"
+            if ".rar" in pa.path.name.lower():
+                return "unrar"
         return None
 
     @property

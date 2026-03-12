@@ -37,7 +37,11 @@ clean:
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 
 # 🏗️  Initial directory setup and virtual environment
-setup: $(VENV)/bin/activate
+setup: sync-ignore $(VENV)/bin/activate
+
+sync-ignore:
+	@echo "🔄 Syncing ignore files..."
+	@cp .claudeignore .geminiignore
 
 $(VENV)/bin/activate: pyproject.toml
 	@echo "🏗️  Setting up virtual environment..."
