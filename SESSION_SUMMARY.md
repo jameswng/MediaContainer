@@ -1,29 +1,26 @@
-# Session Summary: Visual Intelligence Refinement & Configurable DSL
+# Session Summary: Visual Intelligence Refinement & Membership Heuristics
 
 ## Full Session Recomposition
 > **Full Session Recomposition**: `python3 bin/recompose_history.py`
 
 ## Current Truth
 - **Architecture**: Transitions from hardcoded logic to a **Declarative Parser (DSL)** stored in `baked-in-rules.json`. Employs a hybrid configuration model (baked-in baseline + user overrides).
-- **Visual Intelligence**: Implements macOS-native visual analysis using `sips`. Uses **Average Hash (aHash)** for structural matching (resizing/compression) and **Color Histograms** for pictorial similarity (crops/sets).
-- **Trigger Heuristics**: Visual analysis is now the **primary verification tool** for image sets, triggered by "weak" stems or "naming mess" (mixed sequence lengths, numeric collisions, or pattern drift).
-- **Configurability**: Visual thresholds (`hamming_distance_threshold`, `histogram_correlation_threshold`) are now stored in `baked-in-rules.json` and overridable via `~/.mediacontainer.json`.
-- **Data Model**:
-    - `ClassifiedFile`: Stores both normalized `stem` and unmodified `raw_stem`.
-    - `MediaContainer`: Features a "Maximal Readable Name" algorithm and uses LCP of primary media for naming.
-- **Verification**: ✅ 195/195 tests passing (including new messy naming regression fixtures).
+- **Visual Intelligence**: Implements macOS-native visual analysis using `sips`. Uses **Average Hash (aHash)** for structural matching and **Color Histograms** for pictorial similarity.
+- **Membership Heuristics**: Trusts consistent numerical/bracketed naming (e.g. `001.jpg`, `002.jpg`) to skip visual analysis. Triggers visual verification only on "messy" patterns (mixed padding, collisions, pattern drift).
+- **Configurability**: Visual thresholds and **Hashing Resolution** (default 8x8) are now stored in the DSL and overridable via CLI flags (`-vt`, `-vr`) or global settings.
+- **Reporting**: In `-vv` mode, image files display their visual signature `[hash, density]` for transparency and debugging.
+- **Verification**: ✅ 195/195 tests passing.
 
 ## Latest Session (Summary)
 - **Visual Analysis Triggers**:
     - Refactored `MediaContainer._perform_visual_analysis` to trigger on naming inconsistencies (mixed padding, collisions, pattern drift).
-    - Verified that visually distinct images with similar names (e.g., `stem-1.jpg` vs `stem-10.jpg`) are correctly split into separate containers.
-- **Configurable DSL**:
-    - Moved hardcoded visual thresholds into `baked-in-rules.json`.
-    - Updated `Parser` to load and cache these settings, supporting user overrides in global settings.
-- **CLI Refinement**:
-    - Removed redundant `lcp` alias reporting from CLI output to reduce noise.
-    - Improved gallery summarization display.
+    - Implemented **Membership Heuristics** to trust consistent numerical/bracketed patterns, avoiding redundant visual scans.
+- **Configurable DSL & Tuning**:
+    - Moved thresholds to `baked-in-rules.json` and added support for configurable hashing resolution (e.g. 16x16 for 256-bit hashes).
+    - Added CLI flags `--visual-thresholds` (`-vt`) and `--visual-resolution` (`-vr`) for manual tuning.
+- **CLI Excellence**:
+    - Added `--no-visual` (`-nv`) and `--force-visual` (`-fv`) options.
+    - Implemented **Visual Metadata Reporting** in `-vv` mode displaying `[hex_hash, bin_density]`.
 - **Regression Suite**:
-    - Added `ambiguous_lena` and `stem_mess` fixtures to test visual splitting of messy naming schemes.
-    - Updated `minimal_image_stems` and other visual fixtures to reflect refined grouping behavior.
+    - Added `ambiguous_lena`, `stem_mess`, and `bracketed_gallery` fixtures.
     - Verified 195 tests passing across all naming, grouping, and visual modules.

@@ -47,3 +47,21 @@
 - **Verification**: Successfully added multiple image-based fixtures and verified **184 passing tests**, confirming the robustness of the new visual and declarative modules.
 
 - **Final Refinements**: Established `MediaContainer.stem` as the primary attribute for unmodified prefixes (with `lcp` as an alias). Updated `ARCHITECTURE.md` and `DEVELOPER_GUIDE.md` to reflect this change and added the **Moondream2 (1.6B)** AI Vision roadmap for future semantic grouping capabilities.
+
+## Session: Visual Intelligence Refinement & Membership Heuristics (v0.0.70+)
+- **Goal**: Refine visual analysis triggers, implement membership heuristics for numerical sets, and add granular tuning controls.
+- **Visual Intelligence Refinement**:
+    - Refactored `MediaContainer._perform_visual_analysis` to trigger on naming inconsistencies (mixed padding, numeric collisions, or pattern drift).
+    - Implemented **Membership Heuristics for Numerical Stems**: The system now trusts consistent numerical or bracketed naming patterns (e.g., `001.jpg`, `002.jpg`) and skips visual analysis unless "messy" patterns are detected, significantly improving performance for well-named sets.
+    - Enhanced visual analysis to serve as the **primary verification tool** when descriptive stems conflict or collide.
+- **Configurability & Tuning**:
+    - Migrated hardcoded visual thresholds (`hamming_distance_threshold`, `histogram_correlation_threshold`) to the declarative DSL in `baked-in-rules.json`.
+    - Implemented configurable **Hashing Resolution** (e.g., 16x16 for 256-bit hashes) to allow for higher fidelity structural matching.
+    - Added CLI flags `--visual-thresholds` (`-vt`) and `--visual-resolution` (`-vr`) for manual threshold tuning and algorithm debugging.
+- **CLI & Reporting Excellence**:
+    - Added `--no-visual` (`-nv`) to allow explicit opt-out of visual processing and `--force-visual` (`-fv`) to mandate it regardless of naming strength.
+    - Implemented **Visual Metadata Reporting**: In extra-verbose (`-vv`) mode, image files now display their visual signature `[hex_hash, density]` (based on histogram bin occupancy) for transparency and debugging.
+    - Refactored `MediaContainer` grouping logic to ensure metadata is correctly attached to `ClassifiedFile` objects without duplicating entries in content lists.
+- **Verification & Regressions**:
+    - Added multiple complex regression fixtures (`ambiguous_lena`, `stem_mess`, `bracketed_gallery`) to verify surgical splitting and merging behavior in messy naming scenarios.
+    - Verified **195 passing tests**, ensuring total system stability across all naming and visual modules.
