@@ -21,4 +21,12 @@
     - Features: Polymorphic input, atomic writes, sticky path contract, and explicit `set_path` control.
 - **CLI & Installation**: Created `bin/install` for flexible symlinking to `~/.bin/`.
 - **Documentation**: Exhaustive `DEVELOPER_GUIDE.md` with integrated examples.
-- Standardized context ignorance: added FULL_SESSION_SUMMARY.md to both .claudeignore and .geminiignore.
+
+## Global Architectural Integration (v0.0.28+)
+- **ManagedSettings Refinement**:
+    - Renamed parameter to `settings` and enabled polymorphic input (dict or protocol object).
+    - Set `override=False` as the default merging behavior.
+    - Implemented explicit `set_path` flag for granular internal state control.
+- **Standardized Terminology**: Strictly enforced "Protocol" for formal types and "Contract" for informal agreements.
+- **Architecture Alignment**: Incorporated 11 core principles from the global AI Architecture Baseline into `ARCHITECTURE.md`.
+- **Skill Evolution**: Globally updated `session-manager` skill with Dual Summary Architecture, Continuous Logging, and Mandatory GitHub Push.

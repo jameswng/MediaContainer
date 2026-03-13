@@ -4,20 +4,18 @@
 > **Full Session Recomposition**: `python3 bin/recompose_history.py`
 
 ## Current Truth
-- **Architecture**: Decoupled media container grouping engine with a formal `SettingsProtocol` for persistence.
-- **Default Mode**: Python 3.13, Environment-Clean Safe, Protocol-driven.
+- **Architecture**: Decoupled media container grouping engine with a formal `SettingsProtocol` for persistence. Inherits Global AI Architecture Baseline.
+- **Default Mode**: Python 3.13, Environment-Clean Safe, Protocol-driven, Dual Summary.
 - **Verification**: ✅ 131/131 tests passing.
 
 ## Latest Session (Summary)
+- **Global Architectural Integration**:
+    - Incorporated 11 core principles from `~/.config/ai/ARCHITECTURE_TEMPLATE.md` into `ARCHITECTURE.md`.
+    - Standards now include: "Shadow WIP" management, Native Platform Parity, and Operational Target mandates.
 - **Settings Protocol Refinement**:
-    - Implemented formal `SettingsProtocol` using `typing.Protocol`.
-    - Added **Polymorphic Input** (supports `dict` or `SettingsProtocol` objects).
-    - Implemented **Explicit Path Control** (`set_path`) replacing implicit stickiness.
-    - Renamed key parameters to `settings` and `override` for absolute clarity.
-- **Living Documentation**:
-    - Updated `DEVELOPER_GUIDE.md` with exhaustive API references and integrated examples.
-    - Added **Principle 7 (API Protocols)** to `ARCHITECTURE.md` mandating structural typing for all modules.
+    - Implemented formal `SettingsProtocol` with polymorphic input (dict/object).
+    - Default behavior changed to `override=False` for safe merging.
+    - Added explicit `set_path` flag for granular internal state control.
 - **Skill Evolution**:
-    - Updated `session-manager` skill to support **Dual Summary Architecture** (`SESSION_SUMMARY.md` vs `FULL_SESSION_SUMMARY.md`).
-    - Added **Quickcheck** workflow for incremental documentation/remote synchronization.
-    - Mandated implicit **GitHub push** during all checkpoint operations.
+    - Globally updated `session-manager` skill to enforce **Dual Summary Architecture** and **Mandatory GitHub Push**.
+    - Implemented **Continuous Logging** standard in `FULL_SESSION_SUMMARY.md`.
