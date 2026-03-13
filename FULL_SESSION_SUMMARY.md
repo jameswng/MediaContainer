@@ -45,3 +45,5 @@
 - **Smart Naming Engine**: Implemented a "Maximal Readable Name" algorithm that derives clean container names from the Longest Common Prefix of primary media files. The engine automatically detects and preserves the dominant separator (`.`, `_`, or `-`) and strips metadata brackets.
 - **CLI & UX Refinement**: Added support for incremental verbosity (`-v`, `-vv`) and implemented a concise gallery summarization format to reduce terminal clutter while maintaining high detail on demand.
 - **Verification**: Successfully added multiple image-based fixtures and verified **184 passing tests**, confirming the robustness of the new visual and declarative modules.
+
+- **Final Refinements**: Established `MediaContainer.stem` as the primary attribute for unmodified prefixes (with `lcp` as an alias). Updated `ARCHITECTURE.md` and `DEVELOPER_GUIDE.md` to reflect this change and added the **Moondream2 (1.6B)** AI Vision roadmap for future semantic grouping capabilities.
