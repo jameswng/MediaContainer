@@ -263,15 +263,34 @@ Custom rules are prepended to the baseline set, giving them highest priority.
 **Core assumption:** All files sharing a stem or similar stem are affiliated.
 
 1.  **Longest Common Prefix**: Cluster files by normalized stems.
-2.  **Visual Clustering**: For "weak" groups (empty, numeric, or single-character stems), perform visual analysis on images.
+2.  **Visual Clustering**: For "weak" or "inconsistent" groups, perform visual analysis on images.
+    - **Weak Groups**: Empty, numeric, or single-character stems.
+    - **Inconsistent Groups**: Groups with mixed sequence lengths (e.g., `01.jpg` and `001.jpg`), numeric collisions (e.g., `1.jpg` and `01.jpg`), or mixed sequence patterns.
 3.  **Accessory Attachment**: Generic accessory names (`front.jpg`, etc.) attach to the dominant group.
 4.  **Catch-all**: Unaffiliated files go into an "unaffiliated" container.
-
 ### Visual Analysis (Darwin/macOS)
 
-For image sets with non-descriptive names (e.g. `1.jpg`, `2.jpg`), the module utilizes macOS `sips` to generate visual fingerprints and histograms.
+Visual analysis is the **primary verification tool** for image sets when filename heuristics are insufficient or contradictory. It can be explicitly disabled via the CLI (`--no-visual`) or API.
 
-**Grouping Strategies:**
+#### Membership Heuristics for Numerical Stems
+
+When images have purely numerical names (e.g., `1.jpg`, `01.jpg`), the system applies secondary heuristics to determine if visual analysis is necessary:
+
+1.  **Template Consistency**: If all files in a directory share the same numerical padding (e.g., `001.jpg` through `099.jpg`) or the same bracketed pattern (e.g., `(1).jpg` through `(9).jpg`), the system assumes high confidence in a single gallery and trusts the naming convention.
+2.  **Structural Inconsistency (The "Mess" Trigger)**: Visual analysis is prioritized when templates clash:
+    *   **Mixed Padding**: A set containing both `1.jpg` and `001.jpg`.
+    *   **Collision**: Multiple files mapping to the same index (e.g., `1.jpg` and `01.jpg`).
+    *   **Pattern Drift**: Mixed bracket styles or delimiters (e.g., `1.jpg` and `(1).jpg`).
+
+**Triggers for Visual Verification**:
+- **Weak Stems**: Stems that are purely numeric, single characters, or empty, *unless* they satisfy the **Template Consistency** heuristic.
+- **Index Inconsistency**:
+    - **Mixed Padding**: Sequence lengths vary within the same set (e.g., `01` and `001`).
+...
+    - **Numeric Collisions**: Multiple files map to the same effective integer index (e.g., `1.jpg` and `01.jpg`).
+    - **Pattern Drift**: Mixed delimiters or bracket styles for sequences (e.g., `stem_01.jpg` and `stem (01).jpg`).
+
+**Grouping Strategies**:
 1.  **Structural Match (Average Hash)**: 
     - Images are downsampled to 8x8 pixels.
     - A 64-bit string is generated where each bit represents whether a pixel is above or below the average brightness.

@@ -29,6 +29,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -98,7 +99,7 @@ ACCESSORY_NAMES = {
 }
 
 
-@dataclass(frozen=True)
+@dataclass
 class ClassifiedFile:
     path: Path
     file_type: FileType
@@ -109,6 +110,9 @@ class ClassifiedFile:
     extension: str = ""
     split: str | None = None
     sequence: str | None = None
+    # Visual analysis results
+    visual_fingerprint: str | None = None
+    visual_histogram: list[float] | None = None
 
     @classmethod
     def from_filename(cls, filename: str, settings: SettingsProtocol | None = None) -> ClassifiedFile:
@@ -176,7 +180,7 @@ class ClassifiedFile:
 @dataclass
 class MediaContainer:
     name: str
-    lcp: str = ""
+    stem: str = ""
     files: list[ClassifiedFile] = field(default_factory=list)
     settings: SettingsProtocol = field(default_factory=DefaultSettings)
     logger: LoggingProtocol = field(default_factory=DefaultLogger)
@@ -197,16 +201,18 @@ class MediaContainer:
     misc: list[ClassifiedFile] = field(default_factory=list)
 
     @property
-    def stem(self) -> str:
-        """Alias for lcp (unmodified prefix)."""
-        return self.lcp
+    def lcp(self) -> str:
+        """Alias for stem (unmodified prefix)."""
+        return self.stem
 
     @classmethod
     def from_paths(
         cls,
         paths: list[Path],
         settings: SettingsProtocol | None = None,
-        logger: LoggingProtocol | None = None
+        logger: LoggingProtocol | None = None,
+        force_visual: bool = False,
+        disable_visual: bool = False
     ) -> list[MediaContainer]:
         if not paths:
             if logger:
@@ -214,7 +220,9 @@ class MediaContainer:
             return []
 
         if settings is None:
-            settings = DefaultSettings()
+            # Try to load default settings to get visual thresholds
+            from managedsettings import Settings
+            settings = Settings(path="~/.mediacontainer.json")
         if logger is None:
             logger = DefaultLogger()
 
@@ -222,15 +230,16 @@ class MediaContainer:
 
         # 1. Scrambled Detection
         scrambled_groups = cls._find_scrambled_groups(classified)
-        scrambled_files = {f for group in scrambled_groups for f in group}
-        remaining = [f for f in classified if f not in scrambled_files]
+        scrambled_paths = {f.path for group in scrambled_groups for f in group}
+        remaining = [f for f in classified if f.path not in scrambled_paths]
 
         # 2. Accessory and Proper Identification
         accessory_files = [
             f for f in remaining 
             if f.stem in ACCESSORY_NAMES and f.file_type in (FileType.IMAGE, FileType.TEXT, FileType.GALLERY)
         ]
-        remaining = [f for f in remaining if f not in accessory_files]
+        accessory_paths = {f.path for f in accessory_files}
+        remaining = [f for f in remaining if f.path not in accessory_paths]
 
         proper_files = [f for f in remaining if f.file_type != FileType.OTHER]
         others = [f for f in remaining if f.file_type == FileType.OTHER]
@@ -242,15 +251,16 @@ class MediaContainer:
         containers: list[MediaContainer] = []
 
         for group in scrambled_groups:
-            lcp = group[0].raw_stem
-            mc = cls(name=cls._make_readable(lcp), lcp=lcp, files=group, settings=settings, logger=logger, scrambled=True, _group_prefix=group[0].stem)
+            stem = group[0].raw_stem
+            mc = cls(name=cls._make_readable(stem), stem=stem, files=group, settings=settings, logger=logger, scrambled=True, _group_prefix=group[0].stem)
+            mc._assign_lists()
             containers.append(mc)
 
         for group_prefix, group in prefix_groups.items():
             raw_stems = [f.raw_stem for f in group]
-            lcp = raw_stems[0]
+            stem = raw_stems[0]
             for s in raw_stems[1:]:
-                lcp = cls._calculate_longest_common_prefix(lcp, s)
+                stem = cls._calculate_longest_common_prefix(stem, s)
             
             primary_files = [f for f in group if f.file_type in (FileType.VIDEO, FileType.GALLERY, FileType.ARCHIVE, FileType.MULTIPART_ARCHIVE)]
             if primary_files:
@@ -259,13 +269,17 @@ class MediaContainer:
                 for s in primary_raw_stems[1:]:
                     naming_lcp = cls._calculate_longest_common_prefix(naming_lcp, s)
             else:
-                naming_lcp = lcp
+                naming_lcp = stem
 
-            mc = cls(name=cls._make_readable(naming_lcp), lcp=lcp, files=group, settings=settings, logger=logger, _group_prefix=group_prefix)
+            mc = cls(name=cls._make_readable(naming_lcp), stem=stem, files=group, settings=settings, logger=logger, _group_prefix=group_prefix)
+            mc._assign_lists()
             containers.append(mc)
 
         # 5. Visual Analysis (Split/Merge weak containers)
-        containers = cls._perform_visual_analysis(containers, settings, logger)
+        # Extract visual settings from Parser (which handles baked-in + global overrides)
+        parser = Parser(settings)
+        visual_settings = parser.visual_settings
+        containers = cls._perform_visual_analysis(containers, settings, logger, visual_settings, force_visual, disable_visual)
 
         # 6. Accessory and Other Attachment
         if containers:
@@ -276,25 +290,29 @@ class MediaContainer:
             ), reverse=True)
 
             dominant = containers[0]
-            dominant.files.extend(accessory_files)
+            for f in accessory_files:
+                if f not in dominant.files:
+                    dominant.files.append(f)
 
             for f in others:
                 found = False
                 for mc in containers:
                     if mc._group_prefix and (f.stem.startswith(mc._group_prefix) or mc._group_prefix.startswith(f.stem)):
-                        mc.files.append(f)
+                        if f not in mc.files:
+                            mc.files.append(f)
                         found = True
                         break
                 if not found:
                     if len(containers) == 1:
-                        dominant.files.append(f)
+                        if f not in dominant.files:
+                            dominant.files.append(f)
 
         # 7. Unaffiliated catch-all
-        all_assigned = {f for mc in containers for f in mc.files}
-        still_unaffiliated = [f for f in others if f not in all_assigned]
+        all_assigned_paths = {f.path for mc in containers for f in mc.files}
+        still_unaffiliated = [f for f in others if f.path not in all_assigned_paths]
 
         if still_unaffiliated:
-            mc = cls(name="unaffiliated", lcp="unaffiliated", files=still_unaffiliated, settings=settings, logger=logger, unaffiliated=True)
+            mc = cls(name="unaffiliated", stem="unaffiliated", files=still_unaffiliated, settings=settings, logger=logger, unaffiliated=True)
             containers.append(mc)
 
         # 8. Finalize lists
@@ -305,103 +323,193 @@ class MediaContainer:
         return containers
 
     @classmethod
-    def _perform_visual_analysis(cls, containers: list[MediaContainer], settings: SettingsProtocol, logger: LoggingProtocol) -> list[MediaContainer]:
-        """Perform visual analysis on images in 'weak' containers to regroup them."""
+    def _perform_visual_analysis(
+        cls, 
+        containers: list[MediaContainer], 
+        settings: SettingsProtocol, 
+        logger: LoggingProtocol,
+        visual_settings: dict[str, Any] | None = None,
+        force_visual: bool = False,
+        disable_visual: bool = False
+    ) -> list[MediaContainer]:
+        """Perform visual analysis on images in 'weak' or 'inconsistent' containers."""
+        if disable_visual:
+            return containers
+
+        if visual_settings is None:
+            visual_settings = {}
+
+        hamming_threshold = visual_settings.get("hamming_distance_threshold", 10)
+        correlation_threshold = visual_settings.get("histogram_correlation_threshold", 0.95)
+        visual_res = visual_settings.get("visual_resolution", 8)
+
         def is_weak(c: MediaContainer) -> bool:
             return not c.name or (len(c.name) <= 2 and c.name.isdigit())
 
-        # 1. Identify weak containers and extract all images
-        weak_containers = [c for c in containers if is_weak(c)]
-        if not weak_containers:
-            return containers
+        def needs_verification(c: MediaContainer) -> bool:
+            if force_visual:
+                return True
 
-        remaining_containers = [c for c in containers if c not in weak_containers]
+            # Visual analysis is primarily for image grouping
+            if not c.gallery:
+                return is_weak(c)
+
+            seqs = [f.sequence for f in c.gallery if f.sequence]
+            raw_stems = [f.raw_stem for f in c.gallery]
+
+            # 1. Numeric Collisions (e.g. 1.jpg and 01.jpg)
+            if seqs:
+                try:
+                    numeric_seqs = [int(s) for s in seqs]
+                    if len(set(numeric_seqs)) < len(numeric_seqs):
+                        return True
+                except ValueError:
+                    pass
+
+            # 2. Pattern Drift (e.g. multiple raw stem templates mapped to same stem)
+            if len(set(raw_stems)) > 1:
+                # If we have mixed raw stems (templates), we verify.
+                return True
+
+            # 3. Mixed Padding (e.g. 01.jpg vs 001.jpg)
+            if seqs and len(set(len(s) for s in seqs)) > 1:
+                # For weak stems, mixed padding is a high-signal "mess".
+                # For strong stems, we trust the padding difference.
+                if is_weak(c):
+                    return True
+
+            # 4. Weakness check
+            if is_weak(c):
+                # If it's weak but passed the "mess" checks above, it's CONSISTENT.
+                # e.g. all are 001.jpg, 002.jpg OR all are (1).jpg, (2).jpg.
+                # In this case, we trust the folder context and SKIP visual analysis.
+                return False
+
+            return False
         
-        all_weak_files: list[ClassifiedFile] = []
-        for c in weak_containers:
-            all_weak_files.extend(c.files)
-
-        image_files = [f for f in all_weak_files if f.file_type in (FileType.IMAGE, FileType.GALLERY) and f.path.exists()]
-        non_image_files = [f for f in all_weak_files if f not in image_files]
-
-        if not image_files:
+        # Identify containers that need verification
+        verification_candidates = [c for c in containers if needs_verification(c)]
+        if not verification_candidates:
             return containers
 
-        # 2. Compute fingerprints and histograms
-        fingerprints: dict[Path, str] = {}
-        histograms: dict[Path, list[int]] = {}
-        for f in image_files:
-            fp = VisualFingerprint.get_fingerprint(f.path)
-            if fp: fingerprints[f.path] = fp
-            
-            hist = VisualFingerprint.get_histogram(f.path)
-            if hist: histograms[f.path] = hist
+        remaining_containers = [c for c in containers if c not in verification_candidates]
+        
+        # DEBUG
+        print(f"Verification candidates: {[c.name for c in verification_candidates]}")
 
-        # 3. Cluster images by visual similarity
-        clusters: list[list[ClassifiedFile]] = []
-        visited_paths = set()
+        # We group by original container to maintain stem affiliation if they ARE visually similar
+        final_containers = remaining_containers
 
-        for i, f1 in enumerate(image_files):
-            if f1.path in visited_paths: continue
-            
-            fp1 = fingerprints.get(f1.path)
-            hist1 = histograms.get(f1.path)
-            if not fp1 and not hist1: continue
+        for c in verification_candidates:
+            image_files = [f for f in c.files if f.file_type in (FileType.IMAGE, FileType.GALLERY) and f.path.exists()]
+            non_image_files = [f for f in c.files if f not in image_files]
 
-            current_cluster = [f1]
-            visited_paths.add(f1.path)
-            
-            for f2 in image_files[i+1:]:
-                if f2.path in visited_paths: continue
-                fp2 = fingerprints.get(f2.path)
-                hist2 = histograms.get(f2.path)
-                
-                match = False
-                # Strategy 1: Structural Match (aHash Hamming distance <= 10)
-                if fp1 and fp2 and VisualFingerprint.calculate_distance(fp1, fp2) <= 10:
-                    match = True
-                
-                # Strategy 2: Pictorial/Color Match (Histogram Correlation >= 0.95)
-                # This helps with crops/related images from same set
-                if not match and hist1 and hist2:
-                    corr = VisualFingerprint.calculate_histogram_correlation(hist1, hist2)
-                    if corr >= 0.95:
+            if not image_files:
+                final_containers.append(c)
+                continue
+
+            # 2. Compute fingerprints and histograms
+            fingerprints: dict[Path, str] = {}
+            histograms: dict[Path, list[float]] = {}
+            for f in image_files:
+                fp = VisualFingerprint.get_fingerprint(f.path, resolution=visual_res)
+                if fp: fingerprints[f.path] = fp
+
+                hist = VisualFingerprint.get_histogram(f.path)
+                if hist: histograms[f.path] = hist
+
+            # 3. Cluster images by visual similarity
+            clusters: list[list[ClassifiedFile]] = []
+            visited_paths = set()
+
+            for i, f1 in enumerate(image_files):
+                if f1.path in visited_paths: continue
+
+                fp1 = fingerprints.get(f1.path)
+                hist1 = histograms.get(f1.path)
+                if not fp1 and not hist1: continue
+
+                # Attach visual data to f1
+                f1.visual_fingerprint = fp1
+                f1.visual_histogram = hist1
+                current_cluster = [f1]
+                visited_paths.add(f1.path)
+
+                for f2 in image_files[i+1:]:
+                    if f2.path in visited_paths: continue
+                    fp2 = fingerprints.get(f2.path)
+                    hist2 = histograms.get(f2.path)
+
+                    match = False
+                    # Strategy 1: Structural Match (aHash Hamming distance <= threshold)
+                    if fp1 and fp2 and VisualFingerprint.calculate_distance(fp1, fp2) <= hamming_threshold:
                         match = True
-                
-                if match:
-                    current_cluster.append(f2)
-                    visited_paths.add(f2.path)
+
+                    # Strategy 2: Pictorial/Color Match (Histogram Correlation >= threshold)
+                    if not match and hist1 and hist2:
+                        corr = VisualFingerprint.calculate_histogram_correlation(hist1, hist2)
+                        if corr >= correlation_threshold:
+                            match = True
+
+                    if match:
+                        f2.visual_fingerprint = fp2
+                        f2.visual_histogram = hist2
+                        current_cluster.append(f2)
+                        visited_paths.add(f2.path)
+
+                clusters.append(current_cluster)
             
-            clusters.append(current_cluster)
+            # 4. Create new containers from clusters
+            if len(clusters) == 1 and not non_image_files:
+                # Still one group, keep original container but files now have visual data attached
+                final_containers.append(c)
+                continue
 
-        # 4. Create new containers from clusters
-        new_containers = remaining_containers
-        
-        for cluster in clusters:
-            # Generate a stable name
-            first_img_path = cluster[0].path
-            fp = fingerprints.get(first_img_path)
-            if fp:
-                hash_suffix = format(int(fp, 2), 'x')[:8]
-            else:
-                hash_suffix = "unknown"
-            
-            mc = cls(
-                name=f"[Gallery-{hash_suffix}]",
-                lcp=f"visual-group-{hash_suffix}",
-                files=cluster,
-                settings=settings,
-                logger=logger
-            )
-            new_containers.append(mc)
+            # If split, we create new ones
+            for cluster in clusters:
+                # Generate a stable name or use original if appropriate
+                first_img_path = cluster[0].path
+                fp = fingerprints.get(first_img_path)
+                if fp:
+                    hash_suffix = format(int(fp, 2), 'x')[:8]
+                else:
+                    hash_suffix = "unknown"
 
-        # 5. Handle orphans
-        orphans = [f for f in image_files if f.path not in visited_paths] + non_image_files
-        for f in orphans:
-            mc = cls(name=cls._make_readable(f.raw_stem), lcp=f.raw_stem, files=[f], settings=settings, logger=logger)
-            new_containers.append(mc)
+                # If it's a subset of original, we might want to try to keep the name but with suffix
+                new_mc = cls(
+                    name=f"{c.name} [Gallery-{hash_suffix}]" if c.name else f"[Gallery-{hash_suffix}]",
+                    stem=f"{c.stem}-visual-{hash_suffix}",
+                    files=cluster,
+                    settings=settings,
+                    logger=logger
+                )
+                final_containers.append(new_mc)
 
-        return new_containers
+            # Handle orphans and non-images
+            orphans = [f for f in image_files if f.path not in visited_paths] + non_image_files
+            if orphans:
+                if len(clusters) == 0 and not non_image_files:
+                    # No clusters formed, but we might still have individual visual data
+                    for f in orphans:
+                        if f.path in fingerprints or f.path in histograms:
+                            f.visual_fingerprint = fingerprints.get(f.path)
+                            f.visual_histogram = histograms.get(f.path)
+                    final_containers.append(c)
+                else:
+                    for f in orphans:
+                        if f.path in fingerprints or f.path in histograms:
+                            f.visual_fingerprint = fingerprints.get(f.path)
+                            f.visual_histogram = histograms.get(f.path)
+                        mc = cls(
+                            name=cls._make_readable(f.raw_stem),
+                            stem=f.raw_stem,
+                            files=[f],
+                            settings=settings,
+                            logger=logger
+                        )
+                        final_containers.append(mc)
+
+        return final_containers
 
     @classmethod
     def _make_readable(cls, s: str) -> str:
@@ -489,6 +597,18 @@ class MediaContainer:
         return prefix
 
     def _assign_lists(self) -> None:
+        # Clear existing lists to allow re-assignment without duplication
+        self.video.clear()
+        self.sample.clear()
+        self.gallery.clear()
+        self.artwork.clear()
+        self.archives.clear()
+        self.par_files.clear()
+        self.split_media.clear()
+        self.text_files.clear()
+        self.nzb.clear()
+        self.misc.clear()
+
         for f in self.files:
             if f.qualifier == "sample":
                 self.sample.append(f)

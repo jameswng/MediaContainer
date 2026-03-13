@@ -103,7 +103,14 @@ def display_containers(media_containers: list[MediaContainer], label: str, verbo
             for list_name, files in lists_to_print:
                 print(f"  {list_name} [")
                 for f in files:
-                    print(f"    '{f.path.name}'")
+                    line = f"    '{f.path.name}'"
+                    if verbosity >= 2 and f.visual_fingerprint:
+                        # Extract first 8 chars of fingerprint and density of histogram
+                        fp = format(int(f.visual_fingerprint, 2), 'x')[:8]
+                        # Density is the count of bins above a small threshold
+                        density = sum(1 for v in f.visual_histogram if v > 0.005) if f.visual_histogram else 0
+                        line = f"    [{fp},{density:03}] '{f.path.name}'"
+                    print(line)
                 print("  ]")
             print()
         else:
@@ -166,6 +173,26 @@ def main(argv: list[str] | None = None) -> None:
         default=0,
         help="Show detailed dump of media containers. Use -vv for full file lists.",
     )
+    parser.add_argument(
+        "--force-visual", "-fv",
+        action="store_true",
+        help="Force visual analysis even for strong stems.",
+    )
+    parser.add_argument(
+        "--no-visual", "-nv",
+        action="store_true",
+        help="Disable all visual analysis (clustering and metadata).",
+    )
+    parser.add_argument(
+        "--visual-thresholds", "-vt",
+        type=str,
+        help="Override visual thresholds as 'Hamming,Correlation' (e.g. '10,0.95').",
+    )
+    parser.add_argument(
+        "--visual-resolution", "-vr",
+        type=int,
+        help="Override hashing resolution (e.g. 8 for 64-bit, 16 for 256-bit).",
+    )
 
     # Initialize Global Logger (Composition Root)
     logger = sysloglogger
@@ -183,6 +210,23 @@ def main(argv: list[str] | None = None) -> None:
 
         # Initialize Global Settings with injected logger
         settings = Settings(path="~/.mediacontainer.json", logger=logger)
+
+        # CLI Overrides
+        if args.visual_thresholds:
+            try:
+                h, c = args.visual_thresholds.split(",")
+                settings.set("visual_analysis", {
+                    "hamming_distance_threshold": int(h),
+                    "histogram_correlation_threshold": float(c)
+                })
+            except ValueError:
+                print("Error: --visual-thresholds must be in 'int,float' format (e.g. 10,0.95)", file=sys.stderr)
+                sys.exit(1)
+        
+        if args.visual_resolution:
+            v_settings = settings.get("visual_analysis", {})
+            v_settings["visual_resolution"] = args.visual_resolution
+            settings.set("visual_analysis", v_settings)
 
         for input_str in inputs:
             paths: list[Path] = []
@@ -211,7 +255,13 @@ def main(argv: list[str] | None = None) -> None:
                 continue
 
             # Group with injected dependencies
-            media_containers = MediaContainer.from_paths(paths, settings=settings, logger=logger)
+            media_containers = MediaContainer.from_paths(
+                paths, 
+                settings=settings, 
+                logger=logger, 
+                force_visual=args.force_visual,
+                disable_visual=args.no_visual
+            )
 
             display_containers(media_containers, label, args.verbose, args.dry_run)
         # TODO: extraction phase (only if not dry-run and containers found)

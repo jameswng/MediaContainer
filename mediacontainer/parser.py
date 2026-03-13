@@ -59,24 +59,41 @@ class ParseResult:
 class Parser:
     """Handles filename decomposition using declarative rules."""
 
+    _cached_rules: list[Rule] = []
+    _cached_visual_settings: dict[str, Any] = {}
+
     def __init__(self, settings: SettingsProtocol | None = None):
-        self.rules = self._load_baked_in_rules()
+        if not self._cached_rules:
+            self._load_baked_in_data()
+        
+        self.rules = list(self._cached_rules)
+        self.visual_settings = dict(self._cached_visual_settings)
+        
         if settings:
             custom_rules = settings.get("parser_rules", [])
             for r_dict in custom_rules:
                 if "scope" not in r_dict:
                     r_dict["scope"] = "global"
                 self.rules.insert(0, Rule(**r_dict))
+            
+            # Allow global settings to override visual thresholds
+            custom_visual = settings.get("visual_analysis", {})
+            self.visual_settings.update(custom_visual)
 
-    def _load_baked_in_rules(self) -> list[Rule]:
+    @classmethod
+    def _load_baked_in_data(cls) -> None:
         rules_path = Path(__file__).parent / "baked-in-rules.json"
         if not rules_path.exists():
-            return []
+            return
         try:
             data = json.loads(rules_path.read_text())
-            return [Rule(**r) for r in data]
+            if isinstance(data, list):
+                cls._cached_rules = [Rule(**r) for r in data]
+            elif isinstance(data, dict):
+                cls._cached_rules = [Rule(**r) for r in data.get("rules", [])]
+                cls._cached_visual_settings = data.get("visual_analysis", {})
         except Exception:
-            return []
+            pass
 
     def parse(self, path: Path) -> ParseResult:
         filename = path.name
@@ -137,6 +154,8 @@ class Parser:
                         peeled_name = peeled_name[:m.start()] + " " + peeled_name[m.end():]
 
         # 3. Finalization
+        # Strip trailing/leading space before normalization
+        peeled_name = peeled_name.strip()
         res.raw_stem = peeled_name
         
         # Normalize stem for grouping

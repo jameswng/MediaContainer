@@ -1,4 +1,4 @@
-# Session Summary: DSL-Driven Parsing & Native Visual Analysis
+# Session Summary: Visual Intelligence Refinement & Configurable DSL
 
 ## Full Session Recomposition
 > **Full Session Recomposition**: `python3 bin/recompose_history.py`
@@ -6,30 +6,24 @@
 ## Current Truth
 - **Architecture**: Transitions from hardcoded logic to a **Declarative Parser (DSL)** stored in `baked-in-rules.json`. Employs a hybrid configuration model (baked-in baseline + user overrides).
 - **Visual Intelligence**: Implements macOS-native visual analysis using `sips`. Uses **Average Hash (aHash)** for structural matching (resizing/compression) and **Color Histograms** for pictorial similarity (crops/sets).
-- **AI Roadmap**: Formally documented the **Moondream2 (1.6B)** integration plan for semantic image captioning.
-- **Core Principles**: Zero-external-dependency Computer Vision. All image processing is handled via standard system binaries.
+- **Trigger Heuristics**: Visual analysis is now the **primary verification tool** for image sets, triggered by "weak" stems or "naming mess" (mixed sequence lengths, numeric collisions, or pattern drift).
+- **Configurability**: Visual thresholds (`hamming_distance_threshold`, `histogram_correlation_threshold`) are now stored in `baked-in-rules.json` and overridable via `~/.mediacontainer.json`.
 - **Data Model**:
     - `ClassifiedFile`: Stores both normalized `stem` and unmodified `raw_stem`.
     - `MediaContainer`: Features a "Maximal Readable Name" algorithm and uses LCP of primary media for naming.
-    - **Naming Convention**: `MediaContainer.stem` is the primary unmodified prefix; `lcp` is an alias.
-- **CLI Enhancements**: Supports multiple verbosity levels (`-v`, `-vv`). Implements concise gallery summarization (`gallery: [ 'stem##.type' ]`) to maintain high-signal output.
-- **Verification**: ✅ 184/184 tests passing.
+- **Verification**: ✅ 195/195 tests passing (including new messy naming regression fixtures).
 
 ## Latest Session (Summary)
-- **DSL Refactor**:
-    - Extracted all parsing rules into `baked-in-rules.json`.
-    - Implemented `Parser` class to handle iterative suffix peeling and mid-string sequence heuristics.
-    - Added support for `parser_rules` in `~/.mediacontainer.json` for user customization.
-- **Computer Vision Integration**:
-    - Created `visual.py` utilizing `sips` for 8x8 aHash and 125-bin RGB histograms.
-    - Implemented Hamming distance and Cosine similarity for automated regrouping of "weak" containers (e.g., `1.jpg`, `2.jpg`).
-- **Naming Engine**:
-    - Implemented dominant separator detection (preserves user style: `.`, `_`, or `-`).
-    - Added metadata stripping (brackets/parentheses removal from container names).
-    - **Refined Data Model**: Swapped roles of `stem` and `lcp`, establishing `stem` as the primary attribute for unmodified prefix.
-- **AI Vision Roadmap**:
-    - Added comprehensive future enhancement details for **Moondream2 (1.6B)** integration to `ARCHITECTURE.md`.
-- **Validation Suite**:
-    - Added multiple directory fixtures for complex naming and visual scenarios.
-    - Integrated standard benchmark images (`lena`, `baboon`, `cameraman`) into the test suite.
-    - Verified 184 tests passing across all naming, grouping, and visual modules.
+- **Visual Analysis Triggers**:
+    - Refactored `MediaContainer._perform_visual_analysis` to trigger on naming inconsistencies (mixed padding, collisions, pattern drift).
+    - Verified that visually distinct images with similar names (e.g., `stem-1.jpg` vs `stem-10.jpg`) are correctly split into separate containers.
+- **Configurable DSL**:
+    - Moved hardcoded visual thresholds into `baked-in-rules.json`.
+    - Updated `Parser` to load and cache these settings, supporting user overrides in global settings.
+- **CLI Refinement**:
+    - Removed redundant `lcp` alias reporting from CLI output to reduce noise.
+    - Improved gallery summarization display.
+- **Regression Suite**:
+    - Added `ambiguous_lena` and `stem_mess` fixtures to test visual splitting of messy naming schemes.
+    - Updated `minimal_image_stems` and other visual fixtures to reflect refined grouping behavior.
+    - Verified 195 tests passing across all naming, grouping, and visual modules.

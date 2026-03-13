@@ -1,43 +1,50 @@
-[
-  {
-    "name": "split",
-    "pattern": "\\.\\d{3}$",
-    "action": "peel",
-    "scope": "suffix"
-  },
-  {
-    "name": "volume_rar",
-    "pattern": "\\.[rs]\\d{2}$",
-    "action": "peel",
-    "scope": "suffix"
-  },
-  {
-    "name": "volume_part",
-    "pattern": "\\.part\\d+$",
-    "action": "peel",
-    "scope": "suffix"
-  },
-  {
-    "name": "volume_par2",
-    "pattern": "\\.vol\\d+\\+\\d+$",
-    "action": "peel",
-    "scope": "suffix"
-  },
-  {
-    "name": "extension",
-    "pattern": "\\.(?:mkv|avi|mp4|m4v|wmv|flv|mov|mpg|mpeg|ts|vob|ogm|divx|webm|jpg|jpeg|png|bmp|gif|tif|tiff|webp|rar|zip|7z|par2|par|txt|nfo|nzb)$",
-    "action": "peel",
-    "scope": "suffix"
-  },
-  {
-    "name": "qualifier",
-    "pattern": "[-_.](?:sample|screenshot|subs|proof|covers)$",
-    "action": "strip",
-    "scope": "suffix"
-  },
-  {
-    "name": "gallery_sequence",
-    "function": "_heuristic_sequence_extraction",
-    "scope": "global"
+{
+  "rules": [
+    {
+      "name": "split",
+      "pattern": "\\.\\d{3}$",
+      "action": "peel",
+      "scope": "suffix"
+    },
+    {
+      "name": "volume_rar",
+      "pattern": "\\.[rs]\\d{2}$",
+      "action": "peel",
+      "scope": "suffix"
+    },
+    {
+      "name": "volume_part",
+      "pattern": "\\.part\\d+$",
+      "action": "peel",
+      "scope": "suffix"
+    },
+    {
+      "name": "volume_par2",
+      "pattern": "\\.vol\\d+\\+\\d+$",
+      "action": "peel",
+      "scope": "suffix"
+    },
+    {
+      "name": "extension",
+      "pattern": "\\.(?:mkv|avi|mp4|m4v|wmv|flv|mov|mpg|mpeg|ts|vob|ogm|divx|webm|jpg|jpeg|png|bmp|gif|tif|tiff|webp|rar|zip|7z|par2|par|txt|nfo|nzb)$",
+      "action": "peel",
+      "scope": "suffix"
+    },
+    {
+      "name": "qualifier",
+      "pattern": "[-_.](?:sample|screenshot|subs|proof|covers)$",
+      "action": "strip",
+      "scope": "suffix"
+    },
+    {
+      "name": "gallery_sequence",
+      "function": "_heuristic_sequence_extraction",
+      "scope": "global"
+    }
+  ],
+  "visual_analysis": {
+    "hamming_distance_threshold": 10,
+    "histogram_correlation_threshold": 0.95,
+    "visual_resolution": 8
   }
-]
+}

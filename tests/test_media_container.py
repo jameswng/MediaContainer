@@ -92,6 +92,10 @@ class TestStemExtraction:
         ("Vacation-002-Beach.png", "vacation beach", "002"),
         ("Holiday (01).jpg", "holiday", "01"),
         ("Holiday (02).jpg", "holiday", "02"),
+        # Bracketed sequences with varying lengths
+        ("stem_(001).jpg", "stem", "001"),
+        ("stem_(01).jpg", "stem", "01"),
+        ("stem_(1).jpg", "stem", "1"),
     ])
     def test_stem_and_sequence_extraction(self, filename, expected_stem, expected_seq):
         cf = ClassifiedFile.from_filename(filename)
@@ -340,6 +344,29 @@ class TestGrouping:
         mc = containers[0]
         assert mc.name == "Vacation"
         assert mc.lcp.startswith("Vacation")
+
+    def test_mixed_bracketed_gallery_grouping(self):
+        # 10 files with varying bracketed sequence formats: (###), (##), (#)
+        filenames = [
+            "stem_(001).jpg",
+            "stem_(002).jpg",
+            "stem_(003).jpg",
+            "stem_(01).jpg",
+            "stem_(02).jpg",
+            "stem_(03).jpg",
+            "stem_(4).jpg",
+            "stem_(5).jpg",
+            "stem_(6).jpg",
+            "stem_(7).jpg",
+        ]
+        paths = self._paths(filenames)
+        containers = MediaContainer.from_paths(paths)
+        
+        # Should be one single container/gallery
+        assert len(containers) == 1
+        mc = containers[0]
+        assert mc.name == "stem"
+        assert len(mc.gallery) == 10
 
 
 # ---------------------------------------------------------------------------

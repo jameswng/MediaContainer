@@ -43,7 +43,20 @@ class Expected:
 # Define expected results for each fixture
 # ---------------------------------------------------------------------------
 
+import os
+
+...
+
 EXPECTATIONS: dict[str, Expected] = {
+    "ambiguous_lena": Expected(
+        container_count=2 if os.uname().sysname == "Darwin" else 1,
+        # On Mac, 1, 01, 001, (1) are Lena; 2 is Baboon. 
+        # Without visual, they all map to numeric stems and might stay in 1 (if unaffiliated) or 2.
+    ),
+    "stem_mess": Expected(
+        container_count=2 if os.uname().sysname == "Darwin" else 1,
+        # On Mac, stem-1, stem-01 (Lena) vs stem-10, stem-11 (Baboon)
+    ),
     "single_rar_release": Expected(
         container_count=1,
         containers=[{
@@ -369,7 +382,7 @@ EXPECTATIONS: dict[str, Expected] = {
         ],
     ),
     "minimal_image_stems": Expected(
-        container_count=3, # 1-10 group, (1)-(3) group, 01-03 group
+        container_count=5 if os.uname().sysname == "Darwin" else 3, 
     ),
     "mid_string_sequence": Expected(
         container_count=1,
@@ -402,6 +415,28 @@ EXPECTATIONS: dict[str, Expected] = {
             "has_gallery": True,
             "has_text": True,
         }],
+    ),
+    "bracketed_gallery": Expected(
+        container_count=1,
+        containers=[{
+            "name": "stem",
+            "has_gallery": True,
+        }],
+    ),
+    "lena_pictorial": Expected(
+        container_count=3,
+        # Stems: lena, lena_crop, lena_full. 
+        # These are NOT "weak" or "inconsistent" (no sequence mess), so visual isn't triggered.
+    ),
+    "lena_variants": Expected(
+        container_count=4,
+        # Stems: grayscale, low_quality, original, tiny.
+        # Strong stems, no visual analysis triggered.
+    ),
+    "visual_test": Expected(
+        container_count=4,
+        # Stems: baboon, cameraman, fruits, peppers.
+        # Strong stems, no visual analysis triggered.
     ),
 }
 

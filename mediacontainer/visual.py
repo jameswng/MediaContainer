@@ -29,8 +29,8 @@ class VisualFingerprint:
     """Utility for generating visual fingerprints and histograms using macOS sips."""
 
     @staticmethod
-    def get_fingerprint(path: Path) -> str | None:
-        """Generate an 8x8 average hash (64-bit string) using sips."""
+    def get_fingerprint(path: Path, resolution: int = 8) -> str | None:
+        """Generate a structural hash (aHash) for an image."""
         if os.uname().sysname != "Darwin":
             return None
 
@@ -38,15 +38,17 @@ class VisualFingerprint:
             tmp_path = Path(tmp.name)
 
         try:
-            cmd = ["sips", "-s", "format", "bmp", "-z", "8", "8", str(path), "--out", str(tmp_path)]
+            cmd = ["sips", "-s", "format", "bmp", "-z", str(resolution), str(resolution), str(path), "--out", str(tmp_path)]
             subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
             data = tmp_path.read_bytes()
-            if len(data) < 54 + 192:
+            # BMP Header is 54 bytes. Pixels are 3 bytes each (RGB).
+            expected_pixels = resolution * resolution
+            if len(data) < 54 + (expected_pixels * 3):
                 return None
 
             pixels = []
-            for i in range(54, 54 + 192, 3):
+            for i in range(54, 54 + (expected_pixels * 3), 3):
                 b, g, r = data[i], data[i+1], data[i+2]
                 gray = (r + g + b) // 3
                 pixels.append(gray)
