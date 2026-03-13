@@ -225,6 +225,149 @@ EXPECTATIONS: dict[str, Expected] = {
             }
         ]
     ),
+    "multiple_qualifiers": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 4,
+            "has_playable": True,
+            "has_sample": True,
+            "has_artwork": True,
+        }],
+    ),
+    "tv_show_season": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 3,
+            "has_playable": True,
+        }],
+    ),
+    "multi_version_movie": Expected(
+        container_count=2,
+        containers=[
+            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_playable": True},
+        ],
+    ),
+    "complex_dots_underscores": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 2,
+            "has_playable": True,
+            "has_text": True,
+        }],
+    ),
+    "case_sensitivity": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 3,
+            "has_playable": True,
+            "has_text": True,
+        }],
+    ),
+    "non_standard_archive": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 2,
+            "has_archives": True,
+        }],
+    ),
+    "many_accessories": Expected(
+        container_count=2,
+        containers=[
+            {"file_count": 5, "has_playable": True, "has_artwork": True},
+            {"file_count": 1, "has_artwork": True},
+        ],
+    ),
+    "near_duplicates": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 2,
+            "has_playable": True,
+        }],
+    ),
+    "subtitles_set": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 4,
+            "has_playable": True,
+        }],
+    ),
+    "mixed_archives_types": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 3,
+            "has_archives": True,
+        }],
+    ),
+    "misleading_extensions": Expected(
+        container_count=2,
+        containers=[
+            {"file_count": 1, "has_artwork": True},
+            {"file_count": 1, "has_text": True},
+        ],
+    ),
+    "very_long_filenames": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 2,
+            "has_playable": True,
+            "has_text": True,
+        }],
+    ),
+    "numeric_stems": Expected(
+        container_count=2,
+        containers=[
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 1, "has_playable": True},
+        ],
+    ),
+    "dashed_stems": Expected(
+        container_count=2,
+        containers=[
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 1, "has_playable": True},
+        ],
+    ),
+    "multipart_par2_complex": Expected(
+        container_count=1,
+        containers=[{
+            "file_count": 6,
+            "has_archives": True,
+            "has_par": True,
+        }],
+    ),
+    "whitespace_filenames": Expected(
+        container_count=3,
+        containers=[
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 2, "has_archives": True},
+            {"file_count": 1, "has_text": True},
+        ],
+    ),
+    "metacharacter_filenames": Expected(
+        container_count=8,
+        containers=[
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_playable": True},
+        ],
+    ),
+    "unicode_filenames": Expected(
+        container_count=6,
+        containers=[
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 2, "has_playable": True},
+            {"file_count": 2, "has_archives": True, "has_par": True},
+            {"file_count": 2, "has_artwork": True},
+        ],
+    ),
 }
 
 
@@ -234,11 +377,11 @@ EXPECTATIONS: dict[str, Expected] = {
 
 def load_dir_fixture(path: Path) -> list[Path]:
     """Load a .dir file and return a list of Paths (filenames only)."""
-    lines = path.read_text().strip().splitlines()
+    lines = path.read_text().splitlines()
     return [
-        Path(line.strip())
+        Path(line.strip("\r\n"))
         for line in lines
-        if line.strip() and not line.strip().startswith("#")
+        if line.strip("\r\n")
     ]
 
 

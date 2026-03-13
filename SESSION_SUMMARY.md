@@ -9,6 +9,11 @@
 - **Verification**: ✅ 135/135 tests passing.
 
 ## Latest Session (Summary)
+- **New Stem Management Tools**:
+    - Created `bin/list-stem`: Identifies and lists the core stem name for files in a directory, a provided list, or stdin.
+    - Created `bin/rename-stem`: Allows renaming files based on a new stem while preserving all classification metadata (qualifiers, volumes, extensions, splits).
+    - Supports dry-run (`-n`) and shell-escaped command output (`-c`) for safe and flexible renaming.
+    - Robust handling of accessory files (front, back, etc.) to ensure they are not inadvertently renamed to the core stem.
 - **Architectural Validation**:
     - Confirmed the codebase adheres to Modern Technical Excellence (structural typing, DI).
     - Formally deprecated the `Playback` phase from `ARCHITECTURE.md` and CLI orchestration.

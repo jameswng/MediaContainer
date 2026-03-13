@@ -1,0 +1,106 @@
+#!/bin/bash
+# MediaContainer Environment-Clean Safe Wrapper for rename-stem
+if [ -z "$MC_CLEANED" ]; then
+    export MC_CLEANED=1
+    exec env -i HOME="$HOME" USER="$USER" TERM="$TERM" PATH="$PATH" MC_CLEANED=1 "$0" "$@"
+fi
+
+python3 -c '
+import sys
+import shlex
+import os
+from pathlib import Path
+
+# Add project root to sys.path
+ROOT = Path("'$(pwd)'").resolve()
+sys.path.insert(0, str(ROOT))
+
+from mediacontainer.media_container import ClassifiedFile, ACCESSORY_NAMES
+
+def get_new_name(cf, new_stem):
+    # Reconstruct filename from new stem and original metadata
+    # The order is: stem + qualifier + volume + extension + split
+    
+    # If the file is an accessory, we keep its name
+    if cf.path.stem.lower() in ACCESSORY_NAMES or cf.stem in ACCESSORY_NAMES:
+        return cf.path.name
+
+    parts = [new_stem]
+    if cf.qualifier:
+        parts.append(f"-{cf.qualifier}")
+    if cf.volume:
+        parts.append(cf.volume)
+    if cf.extension:
+        parts.append(cf.extension)
+    if cf.split:
+        parts.append(cf.split)
+    
+    return "".join(parts)
+
+def process_rename(old_path, new_stem, dry_run=False, output_commands=False):
+    cf = ClassifiedFile.from_path(old_path)
+    new_name = get_new_name(cf, new_stem)
+    new_path = old_path.parent / new_name
+    
+    if output_commands:
+        print(f"/bin/mv {shlex.quote(str(old_path))} {shlex.quote(str(new_path))}")
+    else:
+        prefix = "[DRY-RUN] " if dry_run else ""
+        if not dry_run:
+            if old_path != new_path:
+                try:
+                    os.rename(old_path, new_path)
+                except Exception as e:
+                    print(f"Error renaming {old_path.name}: {e}", file=sys.stderr)
+                    return
+        print(f"{prefix}{old_path.name} -> {new_name}")
+
+def main():
+    argv = sys.argv[1:]
+    
+    output_commands = False
+    dry_run = False
+    
+    clean_argv = []
+    for arg in argv:
+        if arg == "-c":
+            output_commands = True
+        elif arg == "-n":
+            dry_run = True
+        else:
+            clean_argv.append(arg)
+    
+    if not clean_argv:
+        print("Usage: rename-stem [-c] [-n] [dir|file] newstem", file=sys.stderr)
+        sys.exit(1)
+    
+    if len(clean_argv) == 1:
+        # Read from stdin, clean_argv[0] is new_stem
+        new_stem = clean_argv[0]
+        for line in sys.stdin:
+            line = line.strip()
+            if line:
+                process_rename(Path(line), new_stem, dry_run=dry_run, output_commands=output_commands)
+    else:
+        target_path = Path(clean_argv[0])
+        new_stem = clean_argv[1]
+        
+        if target_path.is_dir():
+            for f in sorted(target_path.iterdir()):
+                if f.is_file():
+                    process_rename(f, new_stem, dry_run=dry_run, output_commands=output_commands)
+        elif target_path.is_file():
+            # Check if it looks like a single file or a list
+            # We assume if it is a file, we process the names inside it
+            with open(target_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        process_rename(Path(line), new_stem, dry_run=dry_run, output_commands=output_commands)
+        else:
+            # Single file rename
+            process_rename(target_path, new_stem, dry_run=dry_run, output_commands=output_commands)
+
+if __name__ == "__main__":
+    main()
+' "$@"
