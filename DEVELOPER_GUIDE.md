@@ -17,18 +17,18 @@ make setup
 The primary interface for a grouped media container.
 
 - `name` (`str`): The "Maximal Readable Name" of the container (cleaned and normalized).
-- `lcp` (`str`): The raw, unmodified Longest Common Prefix of the group's files.
-- `stem` (`str`): Alias to `lcp`.
+- `stem` (`str`): The raw, unmodified Longest Common Prefix of the group's files.
+- `lcp` (`str`): Alias to `stem`.
 - `files` (`list[ClassifiedFile]`): All files identified as part of this container.
-- `video` (`list[ClassifiedFile]`): Ready-to-use video content.
+- `video` (`list[ClassifiedFile]`): Ready-to-use video content. Action: `none`.
 - `sample` (`list[ClassifiedFile]`): Sample videos (e.g., `-sample.mkv`).
-- `gallery` (`list[ClassifiedFile]`): Sequential image sets.
-- `archives` (`list[ClassifiedFile]`): Archives needing extraction.
-- `artwork` (`list[ClassifiedFile]`): Covers, screenshots, and other accessory images.
-- `par_files` (`list[ClassifiedFile]`): PAR and PAR2 recovery files.
-- `split_media` (`list[ClassifiedFile]`): Split media files needing stitching.
-- `text_files` (`list[ClassifiedFile]`): NFO and TXT files.
-- `nzb` (`list[ClassifiedFile]`): NZB files.
+- `gallery` (`list[ClassifiedFile]`): Sequential image sets. Action: `none`.
+- `archives` (`list[ClassifiedFile]`): Archives needing extraction. Action: `extract`.
+- `artwork` (`list[ClassifiedFile]`): Covers, screenshots, and other accessory images. Action: `none`.
+- `par_files` (`list[ClassifiedFile]`): PAR and PAR2 recovery files. Action: `none`.
+- `split_media` (`list[ClassifiedFile]`): Split media files needing stitching. Action: `stitch`.
+- `text_files` (`list[ClassifiedFile]`): NFO and TXT files. Action: `none`.
+- `nzb` (`list[ClassifiedFile]`): NZB files. Action: `none`.
 - `needs_extraction` (`bool`): True if the `archives` list is populated.
 - `extraction_tool` (`str | None`): The recommended tool for extraction (`unrar`, `7z`, `unzip`).
 
@@ -105,7 +105,7 @@ Files are primarily grouped by their normalized stems using a longest common pre
 
 **Visual Fallback**: For image sets with generic names (e.g., `1.jpg`, `2.jpg`), the library uses macOS-native `sips` to perform:
 - **Structural Matching**: Average Hashing (aHash) to detect resized versions.
-- **Pictorial Matching**: Color Histogram correlation to identify photos from the samePictorial or scene.
+- **Pictorial Matching**: Color Histogram correlation to identify photos from the same pictorial or scene.
 
 ### Container Naming
 
