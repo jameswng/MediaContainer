@@ -22,11 +22,11 @@
 - **CLI & Installation**: Created `bin/install` for flexible symlinking to `~/.bin/`.
 - **Documentation**: Exhaustive `DEVELOPER_GUIDE.md` with integrated examples.
 
-## Global Architectural Integration (v0.0.28+)
-- **ManagedSettings Refinement**:
-    - Renamed parameter to `settings` and enabled polymorphic input (dict or protocol object).
-    - Set `override=False` as the default merging behavior.
-    - Implemented explicit `set_path` flag for granular internal state control.
-- **Standardized Terminology**: Strictly enforced "Protocol" for formal types and "Contract" for informal agreements.
+## Global Architectural Integration & Decoupling (v0.0.28+)
 - **Architecture Alignment**: Incorporated 11 core principles from the global AI Architecture Baseline into `ARCHITECTURE.md`.
+- **Total Decoupling via Protocols**:
+    - Created `SyslogLogger` standalone library for native macOS system logging (`syslog`).
+    - Abstracted dependencies in `MediaContainer` and `ManagedSettings` behind formal `typing.Protocol` interfaces (`LoggingProtocol`, `SettingsProtocol`).
+    - Converted `mediacontainer/cli.py` into a strict Composition Root, wiring all isolated components together.
+- **Standardized Terminology**: Strictly enforced "Protocol" for formal types and "Contract" for informal agreements.
 - **Skill Evolution**: Globally updated `session-manager` skill with Dual Summary Architecture, Continuous Logging, and Mandatory GitHub Push.

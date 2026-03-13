@@ -14,3 +14,6 @@ dev = [
 
 [project.scripts]
 mediacontainer = "mediacontainer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mediacontainer*", "managedsettings*", "sysloglogger*"]

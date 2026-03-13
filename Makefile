@@ -16,6 +16,10 @@ PYTEST       := $(BIN)/pytest
 RUFF         := $(BIN)/ruff
 MYPY         := $(BIN)/mypy
 
+# --- Installation Defaults ---
+DEST_DIR     ?= bin
+EXE_NAME     ?= $(PROJECT_NAME)
+
 # --- Source Files ---
 ALL_SOURCES := $(shell find mediacontainer -name "*.py")
 ALL_TESTS   := $(shell find tests -name "*.py")
@@ -38,6 +42,23 @@ clean:
 
 # 🏗️  Initial directory setup and virtual environment
 setup: sync-ignore $(VENV)/bin/activate
+
+install: setup
+	install: setup
+		@echo "📦 Installing $(PROJECT_NAME) command..."
+		@$(BIN)/pip install -e .
+		@echo "🚀 Creating environment-clean executable in $(DEST_DIR)/$(EXE_NAME)..."
+		@mkdir -p $(DEST_DIR)
+		@echo '#!/bin/bash' > $(DEST_DIR)/$(EXE_NAME)
+		@echo '# MediaContainer Environment-Clean Safe Wrapper' >> $(DEST_DIR)/$(EXE_NAME)
+		@echo 'if [ -z "$$MC_CLEANED" ]; then' >> $(DEST_DIR)/$(EXE_NAME)
+		@echo '    export MC_CLEANED=1' >> $(DEST_DIR)/$(EXE_NAME)
+		@echo '    exec env -i HOME="$$HOME" USER="$$USER" TERM="$$TERM" PATH="$$PATH" MC_CLEANED=1 "$$0" "$$@"' >> $(DEST_DIR)/$(EXE_NAME)
+		@echo 'fi' >> $(DEST_DIR)/$(EXE_NAME)
+		@echo "python3 -c 'import sys; from pathlib import Path; ROOT = Path(\"$(PWD)\").resolve(); sys.path.insert(0, str(ROOT)); from mediacontainer.cli import main; main()' \"\$$@\"" >> $(DEST_DIR)/$(EXE_NAME)
+		@chmod +x $(DEST_DIR)/$(EXE_NAME)
+		@echo "✅ Installed: You can now run '$(DEST_DIR)/$(EXE_NAME)' from any directory."
+
 
 sync-ignore:
 	@echo "🔄 Syncing ignore files..."
@@ -97,6 +118,7 @@ help:
 	@echo "mediacontainer Build System"
 	@echo "---------------"
 	@echo "make setup    - Set up virtual environment and install dependencies"
+	@echo "make install  - Install the CLI tool (supports DEST_DIR and EXE_NAME)"
 	@echo "make test     - Run all tests and advance patch version"
 	@echo "make lint     - Run linting and type checks"
 	@echo "make clean    - Remove all build and cache artifacts"

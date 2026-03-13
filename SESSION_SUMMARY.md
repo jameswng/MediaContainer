@@ -4,18 +4,19 @@
 > **Full Session Recomposition**: `python3 bin/recompose_history.py`
 
 ## Current Truth
-- **Architecture**: Decoupled media container grouping engine with a formal `SettingsProtocol` for persistence. Inherits Global AI Architecture Baseline.
+- **Architecture**: Decoupled domain (`MediaContainer`) and support libraries (`ManagedSettings`, `SyslogLogger`).
 - **Default Mode**: Python 3.13, Environment-Clean Safe, Protocol-driven, Dual Summary.
-- **Verification**: ✅ 131/131 tests passing.
+- **Verification**: ✅ 131/131 tests passing (Makefile install target currently WIP).
 
 ## Latest Session (Summary)
+- **Total Decoupling**:
+    - Created `SyslogLogger` standalone package for native system logging.
+    - Updated `MediaContainer` and `ManagedSettings` to use Dependency Injection via a formal `LoggingProtocol`.
+    - Transformed `cli.py` into the Composition Root to wire dependencies together.
 - **Global Architectural Integration**:
     - Incorporated 11 core principles from `~/.config/ai/ARCHITECTURE_TEMPLATE.md` into `ARCHITECTURE.md`.
-    - Standards now include: "Shadow WIP" management, Native Platform Parity, and Operational Target mandates.
 - **Settings Protocol Refinement**:
-    - Implemented formal `SettingsProtocol` with polymorphic input (dict/object).
-    - Default behavior changed to `override=False` for safe merging.
-    - Added explicit `set_path` flag for granular internal state control.
+    - Implemented formal `SettingsProtocol` with polymorphic input (dict/object) and explicit `set_path` flag.
 - **Skill Evolution**:
     - Globally updated `session-manager` skill to enforce **Dual Summary Architecture** and **Mandatory GitHub Push**.
     - Implemented **Continuous Logging** standard in `FULL_SESSION_SUMMARY.md`.

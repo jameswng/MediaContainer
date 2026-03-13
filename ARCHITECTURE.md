@@ -414,9 +414,16 @@ Extract hardcoded stem peeling/stripping rules into a configurable, declarative 
 
 ```
 mediacontainer/
-├── __init__.py         — library exports
-├── media_container.py  — MediaContainer class (standalone library)
-└── settings.py         — persistent settings/preferences management
+├── __init__.py         — core library exports
+└── media_container.py  — MediaContainer logic
+
+managedsettings/
+├── __init__.py         — settings exports
+└── settings.py         — persistent settings management
+
+sysloglogger/
+├── __init__.py         — logger exports
+└── logger.py           — native system logging utility
 ```
 
 Future modules (deferred):
