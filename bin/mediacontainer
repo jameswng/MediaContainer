@@ -1,8 +1,13 @@
 #!/bin/bash
-# MediaContainer Environment-Clean Safe Wrapper
-export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin"
-exec env -i HOME="$HOME" USER="$USER" TERM="$TERM" PATH="$PATH" \
-    /opt/homebrew/bin/python3.13 -c "
+# MediaContainer Environment-Clean Safe Wrapper (Developer Special Case)
+
+# --- Environment-Clean Self-Re-execution ---
+if [ -z "$MC_CLEANED" ]; then
+    export MC_CLEANED=1
+    exec env -i HOME="$HOME" USER="$USER" TERM="$TERM" PATH="$PATH" MC_CLEANED=1 "$0" "$@"
+fi
+
+python3 -c "
 import sys
 from pathlib import Path
 ROOT = Path('/Volumes/real-home/local-home/iam/Work/ai/MediaContainer').resolve()

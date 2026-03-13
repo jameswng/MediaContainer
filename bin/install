@@ -12,17 +12,17 @@
   the actual CLI implementation script.
 - **Symlink Creation**: Creates a symbolic link from the destination 
   to the project's internal executable.
-- **Environment Validation**: Checks if the destination directory is in 
-  the user's PATH and provides a warning if not.
-- **Environment-Clean Safe**: Ensures that the generated executable 
-  runs in a clean environment via `env -i`.
+- **Environment-Clean Safe**: Strips non-essential environment variables 
+  at runtime and generates environment-clean safe wrappers.
 
 ## Program Flow
-1. Parse command-line arguments for destination directory and executable name.
-2. Resolve absolute paths for the source and destination.
-3. Ensure the destination directory exists.
-4. Create (or update) the symbolic link.
-5. Verify PATH configuration and report success.
+1. Sanitize the environment.
+2. Parse command-line arguments for destination directory and executable name.
+3. Resolve absolute paths for the source and destination.
+4. Ensure the internal source executable exists (environment-clean wrapper).
+5. Ensure the destination directory exists.
+6. Create (or update) the symbolic link.
+7. Verify PATH configuration and report success.
 """
 
 import os
@@ -30,8 +30,17 @@ import sys
 import argparse
 from pathlib import Path
 
+def _clean_environment():
+    """Strips environment variables to ensure architectural compliance."""
+    keep = {"HOME", "USER", "PATH", "TERM", "SHELL", "LANG", "LC_ALL"}
+    for key in list(os.environ.keys()):
+        if key not in keep:
+            del os.environ[key]
+
+# --- Environment-Clean Safe Initialization ---
+_clean_environment()
+
 # --- Self-Locating Executable ---
-# Resolve absolute physical path and inject project root into environment
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -41,9 +50,6 @@ DEFAULT_DEST = Path.home() / ".bin"
 DEFAULT_NAME = "mediacontainer"
 PROJECT_ROOT = ROOT
 SOURCE_EXE = PROJECT_ROOT / "bin" / "mediacontainer"
-
-# Strict PATH from Architecture Document
-STRICT_PATH = "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin"
 
 def main():
     parser = argparse.ArgumentParser(
@@ -66,18 +72,22 @@ def main():
     dest_path = dest_dir / args.name
 
     # 1. Ensure internal bin/mediacontainer exists as the symlink target
-    # This wrapper ensures Environment-Clean Safety
+    # This wrapper uses the Shell-based Environment-Clean Safe Re-execution pattern.
     if not SOURCE_EXE.exists():
         print(f"🚀 Creating environment-clean source executable at {SOURCE_EXE}...")
         SOURCE_EXE.parent.mkdir(parents=True, exist_ok=True)
         
-        # We use a shell wrapper to invoke python in a clean environment
         content = [
             "#!/bin/bash",
-            "# MediaContainer Environment-Clean Safe Wrapper",
-            f"export PATH=\"{STRICT_PATH}\"",
-            f"exec env -i HOME=\"$HOME\" USER=\"$USER\" TERM=\"$TERM\" PATH=\"$PATH\" \\",
-            f"    /opt/homebrew/bin/python3.13 -c \"",
+            "# MediaContainer Environment-Clean Safe Wrapper (Developer Special Case)",
+            "",
+            "# --- Environment-Clean Self-Re-execution ---",
+            "if [ -z \"$MC_CLEANED\" ]; then",
+            "    export MC_CLEANED=1",
+            "    exec env -i HOME=\"$HOME\" USER=\"$USER\" TERM=\"$TERM\" PATH=\"$PATH\" MC_CLEANED=1 \"$0\" \"$@\"",
+            "fi",
+            "",
+            "python3 -c \"",
             "import sys",
             "from pathlib import Path",
             f"ROOT = Path('{PROJECT_ROOT}').resolve()",

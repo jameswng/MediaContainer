@@ -10,18 +10,31 @@
 - Loads filenames from `.dir` fixture files.
 - Invokes `MediaContainer.from_paths`.
 - Displays identified containers and their categorized contents.
+- **Environment-Clean Safe**: Strips non-essential environment variables at runtime.
 
 ## Program Flow
-1. Resolve project root and inject into `sys.path`.
-2. Select representative fixtures.
-3. For each fixture:
+1. Sanitize the environment.
+2. Resolve project root and inject into `sys.path`.
+3. Select representative fixtures.
+4. For each fixture:
    a. Load filenames.
    b. Group with `MediaContainer`.
    c. Print a structured summary.
 """
 
+import os
 import sys
 from pathlib import Path
+
+def _clean_environment():
+    """Strips environment variables to ensure architectural compliance."""
+    keep = {"HOME", "USER", "PATH", "TERM", "SHELL", "LANG", "LC_ALL"}
+    for key in list(os.environ.keys()):
+        if key not in keep:
+            del os.environ[key]
+
+# --- Environment-Clean Safe Initialization ---
+_clean_environment()
 
 # --- Self-Locating Executable ---
 ROOT = Path(__file__).resolve().parent.parent

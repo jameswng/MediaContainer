@@ -10,6 +10,9 @@ The codebase must represent the current state of the art in Python development. 
 - **Type Safety**: All new code MUST be fully type-hinted and pass `mypy` or `pyright` checks.
 - **Modern Standards**: Prefer `pathlib` over `os.path`, `pytest` for testing, and `ruff` for linting/formatting.
 - **Environment-Clean Safe**: Scripts and execs of script interpreters MUST be environment clean safe and use the appropriate methods to do so (such as `env -i`). They should not rely on the user's personal environment variables (e.g., `PYTHONPATH`, `LD_LIBRARY_PATH`) and MUST use a controlled environment to ensure a predictable execution state. Homebrew bin/sbin directories are considered safe for this context.
+    - **Implementation (Python)**: Use `#!/usr/bin/env python3` for binary resolution, followed immediately by an internal `os.environ` pruning block to strip non-essential variables.
+    - **Implementation (Shell)**: Use a sentinel-based re-execution pattern: `if [ -z "$CLEANED" ]; then exec env -i ... CLEANED=1 "$0" "$@"; fi`.
+- **Developer Special Case**: For development convenience, scripts may use the user's `PATH` via `env` to identify the preferred interpreter (e.g., `python3`), provided the execution environment is otherwise stripped of non-essential variables. This allows the script to respect the user's private path for binary resolution while maintaining a clean execution state.
 - **Eliminate Legacy**: No `setup.py`, no old-style classes, no manual string formatting (use f-strings).
 
 ### 2. Self-Documenting Source Headers
@@ -36,7 +39,7 @@ Every shell invocation MUST start with no profile or rc files loaded. Use `/bin/
 
 ### Strict PATH
 The execution environment is restricted to a set of known-safe system and package manager directories:
-`/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin`
+`/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin`
 
 No additional directories (like user-local `bin` or project-relative paths) are permitted in the base execution `PATH`. `export PATH` must be set explicitly in the `Makefile` and any automation scripts.
 

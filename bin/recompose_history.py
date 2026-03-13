@@ -12,16 +12,17 @@
 - **Environment Injection**: Injects the project root into `sys.path` to ensure
   module discoverability.
 - **Context Gathering**: Reads `SESSION_SUMMARY.md`, `ARCHITECTURE.md`, and git history.
-- **Environment-Clean Safe**: Ensures subprocesses run with a restricted PATH and
-  clean environment via `env -i`.
+- **Environment-Clean Safe**: Strips non-essential environment variables at runtime
+  to ensure a predictable execution state.
 
 ## Program Flow
-1. Resolve the script's physical location and the project root.
-2. Inject the root directory into `sys.path`.
-3. Handle `--help` if requested.
-4. Locate and display `SESSION_SUMMARY.md` if available.
-5. Locate and display the first 20 lines of `ARCHITECTURE.md`.
-6. Display the most recent 5 git commit messages using a clean environment.
+1. Sanitize the environment (internal cleaning).
+2. Resolve the script's physical location and the project root.
+3. Inject the root directory into `sys.path`.
+4. Handle `--help` if requested.
+5. Locate and display `SESSION_SUMMARY.md` if available.
+6. Locate and display the first 20 lines of `ARCHITECTURE.md`.
+7. Display the most recent 5 git commit messages using a clean environment.
 """
 
 import os
@@ -30,11 +31,17 @@ import argparse
 import subprocess
 from pathlib import Path
 
-# --- Constants ---
-STRICT_PATH = "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin"
+def _clean_environment():
+    """Strips environment variables to ensure architectural compliance."""
+    keep = {"HOME", "USER", "PATH", "TERM", "SHELL", "LANG", "LC_ALL"}
+    for key in list(os.environ.keys()):
+        if key not in keep:
+            del os.environ[key]
+
+# --- Environment-Clean Safe Initialization ---
+_clean_environment()
 
 # --- Self-Locating Executable ---
-# Resolve absolute physical path and inject project root into environment
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -69,21 +76,13 @@ def main():
 
     print("\n[GIT] Recent Checkpoints:")
     
-    # Environment-Clean Safe execution of Git
-    clean_env = {
-        "HOME": os.environ.get("HOME", ""),
-        "USER": os.environ.get("USER", ""),
-        "PATH": STRICT_PATH,
-        "TERM": os.environ.get("TERM", "xterm-256color")
-    }
-    
     try:
+        # Subprocess already inherits our cleaned environment
         res = subprocess.run(
             ["git", "log", "-n", "5", "--oneline"],
             capture_output=True,
             text=True,
-            check=False,
-            env=clean_env
+            check=False
         )
         print(res.stdout)
     except Exception:

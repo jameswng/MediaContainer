@@ -3,7 +3,7 @@
 
 # --- Environment & Shell ---
 SHELL      := /bin/bash --noprofile --norc
-export PATH := /usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin
+export PATH := /opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin
 
 # --- Project Constants ---
 PROJECT_NAME := mediacontainer
