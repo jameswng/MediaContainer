@@ -57,3 +57,4 @@ FULL_SESSION_HISTORY.log*
 .claudeignore
 .geminiignore
 .gemini/
+FULL_SESSION_SUMMARY.md

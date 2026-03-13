@@ -21,3 +21,4 @@
     - Features: Polymorphic input, atomic writes, sticky path contract, and explicit `set_path` control.
 - **CLI & Installation**: Created `bin/install` for flexible symlinking to `~/.bin/`.
 - **Documentation**: Exhaustive `DEVELOPER_GUIDE.md` with integrated examples.
+- Standardized context ignorance: added FULL_SESSION_SUMMARY.md to both .claudeignore and .geminiignore.
