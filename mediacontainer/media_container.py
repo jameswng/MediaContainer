@@ -33,6 +33,15 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
+
+
+@runtime_checkable
+class SettingsProtocol(Protocol):
+    """Protocol defining the expected interface for settings management."""
+    path: Path | None
+    def get(self, key: str, default: Any = None) -> Any: ...
+    def set(self, key: str, value: Any, save: bool = False) -> None: ...
 
 
 class FileType(Enum):
@@ -199,10 +208,18 @@ class ClassifiedFile:
         )
 
 
+class DefaultSettings:
+    """Minimal dummy implementation of the settings protocol."""
+    path: Path | None = None
+    def get(self, key: str, default: Any = None) -> Any: return default
+    def set(self, key: str, value: Any, save: bool = False) -> None: pass
+
+
 @dataclass
 class MediaContainer:
     name: str
     files: list[ClassifiedFile] = field(default_factory=list)
+    settings: SettingsProtocol = field(default_factory=DefaultSettings)
     scrambled: bool = False
     unaffiliated: bool = False
 
@@ -218,9 +235,18 @@ class MediaContainer:
     misc: list[ClassifiedFile] = field(default_factory=list)
 
     @classmethod
-    def from_paths(cls, paths: list[Path]) -> list[MediaContainer]:
+    def from_paths(
+        cls, 
+        paths: list[Path], 
+        settings: SettingsProtocol | None = None
+    ) -> list[MediaContainer]:
         if not paths:
             return []
+
+        if settings is None:
+            settings = DefaultSettings()
+
+        assert settings is not None  # Narrow type for Mypy
 
         classified = [ClassifiedFile.from_path(p) for p in paths]
 
@@ -250,12 +276,12 @@ class MediaContainer:
         
         # Scrambled containers
         for group in scrambled_groups:
-            mc = cls(name=group[0].stem, files=group, scrambled=True)
+            mc = cls(name=group[0].stem, files=group, settings=settings, scrambled=True)
             containers.append(mc)
             
         # longest common prefix containers
         for group_name, group in prefix_groups.items():
-            mc = cls(name=group_name, files=group)
+            mc = cls(name=group_name, files=group, settings=settings)
             containers.append(mc)
 
         # 4. Attach Accessories & Others
@@ -305,7 +331,7 @@ class MediaContainer:
         still_unaffiliated = [f for f in others if f not in all_assigned]
         
         if still_unaffiliated:
-            mc = cls(name="unaffiliated", files=still_unaffiliated, unaffiliated=True)
+            mc = cls(name="unaffiliated", files=still_unaffiliated, settings=settings, unaffiliated=True)
             containers.append(mc)
 
         # 6. Finalize containers
@@ -400,7 +426,7 @@ class MediaContainer:
                 break
         return prefix
 
-    def _assign_lists(self):
+    def _assign_lists(self) -> None:
         for f in self.files:
             if f.qualifier == "sample":
                 self.sample.append(f)
@@ -426,7 +452,7 @@ class MediaContainer:
             else:
                 self.misc.append(f)
 
-    def _sort_lists(self):
+    def _sort_lists(self) -> None:
         # Archives ordered by volume/split
         self.archives.sort(key=lambda f: (f.volume or "", f.split or ""))
         # Playable ordered by name

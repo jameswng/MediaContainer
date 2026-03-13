@@ -6,7 +6,7 @@
 ## Current Truth
 - **Architecture**: Logical media container grouping library with support for archives, split files, and accessory mapping.
 - **Default Mode**: Python 3.13, idiomatic PEP 8 lowercase package naming (`mediacontainer`), fully type-hinted, Environment-Clean Safe.
-- **Verification**: ✅ 122/122 tests passing (unit + regression).
+- **Verification**: ✅ 131/131 tests passing (unit + regression + settings).
 
 ## Compressed History
 - **Architectural Alignment**:
@@ -21,6 +21,12 @@
 - **CLI & Installation**:
     - **Flexible Installation**: Created `bin/install` to install a self-locating symlink to `~/.bin/` by default, with overridable destination and name (`-d` and `-n`).
     - **Regression Test Verification**: Enhanced regression tests to verify that 100% of input files are successfully assigned to containers.
+- **Support Libraries**:
+    - **ManagedSettings**: Implemented a standalone support library for persistent JSON-based configuration management.
+    - **SettingsProtocol**: Defined a formal `typing.Protocol` for settings, enabling decoupled integration.
+    - **Explicit Path Control**: Implemented the `set_path` flag for granular control over the instance's internal default path.
+- **Documentation**:
+    - **Developer's Guide**: Created an exhaustive `DEVELOPER_GUIDE.md` covering all exposed APIs, parameters, protocols, and integrated usage examples.
 - **Project Integrity**:
     - **Python 3.13**: Ensured strict adherence to Python 3.13 and modern standards.
-    - **Verification**: All 122 tests verified as passing after architectural refactors.
+    - **Verification**: All 131 tests verified as passing after architectural refactors and new library implementation.

@@ -7,7 +7,8 @@
 ### 1. Modern Technical Excellence
 The codebase must represent the current state of the art in Python development. This is a zero-tolerance mandate applied continuously:
 - **Python 3.11+**: Utilize modern features like structural pattern matching, advanced type hinting, and `asyncio` where appropriate.
-- **Type Safety**: All new code MUST be fully type-hinted and pass `mypy` or `pyright` checks.
+- **Structural Typing (Protocols)**: Every library or module MUST define its public interface via a formal `typing.Protocol`. All cross-module interaction should hint against these protocols rather than concrete classes to ensure decoupling.
+- **Strict Type Annotation**: All functions and methods MUST use PEP 484/526 annotated typing for all parameters and return values.
 - **Modern Standards**: Prefer `pathlib` over `os.path`, `pytest` for testing, and `ruff` for linting/formatting.
 - **Environment-Clean Safe**: Scripts and execs of script interpreters MUST be environment clean safe and use the appropriate methods to do so (such as `env -i`). They should not rely on the user's personal environment variables (e.g., `PYTHONPATH`, `LD_LIBRARY_PATH`) and MUST use a controlled environment to ensure a predictable execution state. Homebrew bin/sbin directories are considered safe for this context.
     - **Implementation (Python)**: Use `#!/usr/bin/env python3` for binary resolution, followed immediately by an internal `os.environ` pruning block to strip non-essential variables.
@@ -29,6 +30,36 @@ Any command that can be run standalone, such as tools, apps, and tests, MUST pro
 
 ### 5. Automated Continuous Versioning
 The project uses a Semantic Versioning (SemVer) strategy where the **Patch** version (e.g., 0.1.x) is automatically advanced by the build system every time a change is compiled or tested via the `Makefile`.
+
+### 6. Living Developer's Guide
+The project MUST maintain a `DEVELOPER_GUIDE.md` that serves as the primary onboarding and reference document for library consumers. It MUST contain:
+- **Installation**: Clear instructions for setting up the library.
+- **API Documentation**: A complete reference of all exposed APIs and protocols for the core library AND any support libraries.
+    - Each entry MUST include a detailed explanation of parameters, return values, and intended usage.
+    - For complex cases or advanced features, a suitable, runnable example MUST be provided.
+- **Data Model**: Exhaustive detail on public classes, attributes, and enums.
+- **Methodology**: Explanation of the core algorithms (grouping, classification) from a consumer's perspective.
+
+### 7. API Protocols
+Every library or core module MUST define its public interface via a formal `typing.Protocol`. All cross-module dependencies MUST hint against these protocols rather than concrete classes. This ensures structural typing and prevents circular dependencies.
+
+---
+
+## Support Libraries
+
+To maintain a clean and decoupled domain model, generic infrastructure tasks (such as configuration management) are handled by dedicated support libraries residing in the same workspace.
+
+### ManagedSettings (SettingsProtocol)
+A standalone, dictionary-backed persistence library following a formal `typing.Protocol` named `SettingsProtocol`.
+- **Explicit Path Control**: Methods accepting a `path` argument MUST include a `set_path: bool = False` flag. The internal default path is only updated if `set_path` is `True`.
+- **Polymorphic Input**: All data parameters (named `settings`) accept either a standard Python `dict` or another `SettingsProtocol` object.
+- **Loading vs. Merging**:
+    - `load()`: Clears existing in-memory settings before applying new data.
+    - `merge()`: Combines new data with existing settings.
+- **The Contract**: Beyond the formal protocol, the library follows an API contract where the instance maintains a "sticky" path for its lifetime once set.
+- **Precedence (Override)**: Merging operations use an `override` flag (default: `False`) to determine if incoming keys replace existing ones.
+
+- **Exportable**: The library provides an `as_dict()` method to allow cloning or external processing of the raw settings.
 
 ---
 
