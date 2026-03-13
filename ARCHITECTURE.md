@@ -385,7 +385,7 @@ Archives may contain other archives (e.g., zip files containing rar files, or ra
 - Split media file stitching (concatenation)
 - Ram drive (`/Volumes/ram`) — required for extraction and stitching, no fallback
 
-### Playback
+### Playback (DEPRECATED)
 - Launch media player (likely mpv) with extracted/loose media files
 - Image viewer for image-set containers
 - CD1/CD2 ordering

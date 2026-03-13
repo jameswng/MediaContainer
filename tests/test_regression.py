@@ -160,6 +160,71 @@ EXPECTATIONS: dict[str, Expected] = {
             "file_count": 3,
         }],
     ),
+    "multiple_episodes": Expected(
+        container_count=2,
+        containers=[
+            {
+                "file_count": 4,
+                "has_archives": True,
+                "scrambled": False,
+                "unaffiliated": False,
+            },
+            {
+                "file_count": 4,
+                "has_archives": True,
+                "scrambled": False,
+                "unaffiliated": False,
+            }
+        ]
+    ),
+    "mixed_scrambled_and_clear": Expected(
+        container_count=2,
+        containers=[
+            {
+                "file_count": 5,
+                "has_archives": True,
+                "scrambled": False,
+            },
+            {
+                "file_count": 3,
+                "has_archives": True,
+                "scrambled": True,
+            }
+        ]
+    ),
+    "ambiguous_splits": Expected(
+        container_count=3,
+        containers=[
+            {
+                "file_count": 4,
+                "has_split_media": True,
+                "has_archives": False,
+                "has_artwork": True,
+            },
+            {
+                "file_count": 2,
+                "has_archives": True,
+                "has_split_media": False,
+            },
+            {
+                "file_count": 2,
+                "has_archives": True,
+            }
+        ]
+    ),
+    "complex_multipart_split": Expected(
+        container_count=1,
+        containers=[
+            {
+                "file_count": 7,
+                "has_archives": True,
+                "has_sample": True,
+                "has_artwork": True,
+                "has_text": True,
+                "primary_archive_name": "Complex.Release.part1.rar.001",
+            }
+        ]
+    ),
 }
 
 

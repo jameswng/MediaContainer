@@ -44,20 +44,19 @@ clean:
 setup: sync-ignore $(VENV)/bin/activate
 
 install: setup
-	install: setup
-		@echo "📦 Installing $(PROJECT_NAME) command..."
-		@$(BIN)/pip install -e .
-		@echo "🚀 Creating environment-clean executable in $(DEST_DIR)/$(EXE_NAME)..."
-		@mkdir -p $(DEST_DIR)
-		@echo '#!/bin/bash' > $(DEST_DIR)/$(EXE_NAME)
-		@echo '# MediaContainer Environment-Clean Safe Wrapper' >> $(DEST_DIR)/$(EXE_NAME)
-		@echo 'if [ -z "$$MC_CLEANED" ]; then' >> $(DEST_DIR)/$(EXE_NAME)
-		@echo '    export MC_CLEANED=1' >> $(DEST_DIR)/$(EXE_NAME)
-		@echo '    exec env -i HOME="$$HOME" USER="$$USER" TERM="$$TERM" PATH="$$PATH" MC_CLEANED=1 "$$0" "$$@"' >> $(DEST_DIR)/$(EXE_NAME)
-		@echo 'fi' >> $(DEST_DIR)/$(EXE_NAME)
-		@echo "python3 -c 'import sys; from pathlib import Path; ROOT = Path(\"$(PWD)\").resolve(); sys.path.insert(0, str(ROOT)); from mediacontainer.cli import main; main()' \"\$$@\"" >> $(DEST_DIR)/$(EXE_NAME)
-		@chmod +x $(DEST_DIR)/$(EXE_NAME)
-		@echo "✅ Installed: You can now run '$(DEST_DIR)/$(EXE_NAME)' from any directory."
+	@echo "📦 Installing $(PROJECT_NAME) command..."
+	@$(BIN)/pip install -e .
+	@echo "🚀 Creating environment-clean executable in $(DEST_DIR)/$(EXE_NAME)..."
+	@mkdir -p $(DEST_DIR)
+	@echo '#!/bin/bash' > $(DEST_DIR)/$(EXE_NAME)
+	@echo '# MediaContainer Environment-Clean Safe Wrapper' >> $(DEST_DIR)/$(EXE_NAME)
+	@echo 'if [ -z "$$MC_CLEANED" ]; then' >> $(DEST_DIR)/$(EXE_NAME)
+	@echo '    export MC_CLEANED=1' >> $(DEST_DIR)/$(EXE_NAME)
+	@echo '    exec env -i HOME="$$HOME" USER="$$USER" TERM="$$TERM" PATH="$$PATH" MC_CLEANED=1 "$$0" "$$@"' >> $(DEST_DIR)/$(EXE_NAME)
+	@echo 'fi' >> $(DEST_DIR)/$(EXE_NAME)
+	@echo "python3 -c 'import sys; from pathlib import Path; ROOT = Path(\"$(PWD)\").resolve(); sys.path.insert(0, str(ROOT)); from mediacontainer.cli import main; main()' \"\$$@\"" >> $(DEST_DIR)/$(EXE_NAME)
+	@chmod +x $(DEST_DIR)/$(EXE_NAME)
+	@echo "✅ Installed: You can now run '$(DEST_DIR)/$(EXE_NAME)' from any directory."
 
 
 sync-ignore:

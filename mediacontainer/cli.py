@@ -6,7 +6,7 @@
 
 ## Algorithmic Methodology
 - Parses command line arguments using `argparse`.
-- Orchestrates the scanning, grouping, and (future) extraction/playback phases.
+- Orchestrates the scanning, grouping, and (future) extraction phases.
 - Provides a human-readable summary of identified media containers.
 - **Composition Root**: Injects concrete dependencies (Settings, SyslogLogger) into decoupled libraries.
 
@@ -16,7 +16,7 @@
 3. Resolve the target directory.
 4. Invoke `MediaContainer.from_paths` with injected logger and settings.
 5. Display a structured list of containers and their contents.
-6. (Planned) Trigger extraction and playback.
+6. (Planned) Trigger extraction.
 """
 
 from __future__ import annotations
@@ -97,8 +97,8 @@ def main(argv: list[str] | None = None) -> None:
             print("(dry run — no actions taken)")
             return
 
-        # TODO: extraction and playback phases
-        print("(extraction and playback not yet implemented)")
+        # TODO: extraction phase
+        print("(extraction not yet implemented)")
 
     except Exception as e:
         logger.log_error("mediacontainer", f"Unhandled CLI exception: {e}")

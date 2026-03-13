@@ -4,11 +4,4 @@ if [ -z "$MC_CLEANED" ]; then
     export MC_CLEANED=1
     exec env -i HOME="$HOME" USER="$USER" TERM="$TERM" PATH="$PATH" MC_CLEANED=1 "$0" "$@"
 fi
-python3 -c "
-import sys
-from pathlib import Path
-ROOT = Path('/Volumes/real-home/local-home/iam/Work/ai/MediaContainer').resolve()
-if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
-from mediacontainer.cli import main
-if __name__ == "__main__": main()"
- "$@"
+python3 -c 'import sys; from pathlib import Path; ROOT = Path("/Volumes/real-home/local-home/iam/Work/ai/MediaContainer").resolve(); sys.path.insert(0, str(ROOT)); from mediacontainer.cli import main; main()' "$@"

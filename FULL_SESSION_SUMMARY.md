@@ -30,3 +30,10 @@
     - Converted `mediacontainer/cli.py` into a strict Composition Root, wiring all isolated components together.
 - **Standardized Terminology**: Strictly enforced "Protocol" for formal types and "Contract" for informal agreements.
 - **Skill Evolution**: Globally updated `session-manager` skill with Dual Summary Architecture, Continuous Logging, and Mandatory GitHub Push.
+
+## Session: Architectural Review, Advanced Regressions, and Playback Deprecation
+- **Goal**: Validate architectural compliance, fortify the grouping heuristics with complex regressions, and pivot away from playback execution.
+- **Architectural Validation**: Ensured the codebase strictly utilizes Modern Technical Excellence principles (structural typing via Protocols, Composition Root pattern in CLI).
+- **Advanced Regressions**: Introduced difficult regression fixtures (multiple_episodes, mixed_scrambled_and_clear, ambiguous_splits) which verified the high reliability of the right-to-left suffix peeling and 700ngest-common-prefix rules.
+- **Behavioral Pivot**: Formally deprecated the Playback phase from ARCHITECTURE.md and the CLI, focusing the tool solely on classification and extraction preparation. Verified the codebase uses standard Python lexicographical sorting to handle multi-part ordering.
+- **Developer Documentation**: Rewrote DEVELOPER_GUIDE.md (and created an HTML export) to document the explicit types, Health Flags, and Action Contexts defined in the MediaContainerProtocol and ClassifiedFileProtocol. All tests pass perfectly.

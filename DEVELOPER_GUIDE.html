@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: #f9f9fb;
+  }
+  h1 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+    font-size: 2.5em;
+  }
+  h2 {
+    color: #2980b9;
+    margin-top: 2rem;
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 0.3rem;
+  }
+  h3 {
+    color: #8e44ad;
+  }
+  h4 {
+    color: #e67e22;
+  }
+  p, li {
+    font-size: 1.05em;
+  }
+  code {
+    background-color: #fdf6e3;
+    color: #c0392b;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.95em;
+  }
+  pre {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+  }
+  pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+  }
+  hr {
+    border: 0;
+    height: 1px;
+    background: #ecf0f1;
+    margin: 2rem 0;
+  }
+  ul {
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 0.5rem;
+  }
+  .highlight {
+    color: #27ae60;
+    font-weight: bold;
+  }
+  .methodology {
+    background-color: #e8f8f5;
+    border-left: 4px solid #2ecc71;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+</style>
+</head>
+<body>
+
+  <h1>MediaContainer — Developer's Guide</h1>
+  <p>This guide provides a comprehensive reference for developers consuming the <code>mediacontainer</code>, <code>managedsettings</code>, and <code>sysloglogger</code> libraries within this workspace.</p>
+
+  <h2>1. Installation &amp; Environment</h2>
+  <p>The workspace provides isolated, standard environments and tasks managed via <code>make</code>.</p>
+  <ul>
+    <li><code>make setup</code>: Initializes the environment and installs dependencies.</li>
+    <li><code>make test</code>: Executes the test suite via <code>pytest</code>.</li>
+    <li><code>make lint</code>: Executes static analysis via <code>ruff</code>.</li>
+    <li><code>make format</code>: Automatically applies code formatting.</li>
+  </ul>
+  <p>All binaries and scripts in this project are <span class="highlight">Environment-Clean Safe</span>; they dynamically resolve their paths and strip user-local variables to ensure deterministic execution environments.</p>
+
+  <hr>
+
+  <h2>2. ManagedSettings (SettingsProtocol)</h2>
+  <p>A standalone, persistent configuration library.</p>
+  
+  <h3>Core Concepts</h3>
+  <ul>
+    <li><strong>Explicit Path Control</strong>: Methods accepting a <code>path</code> parameter will only update the instance's "sticky" internal path if <code>set_path=True</code> is provided.</li>
+    <li><strong>Polymorphic Input</strong>: The <code>settings</code> parameter accepts either a standard Python <code>dict</code> or another object implementing the <code>SettingsProtocol</code> (providing <code>as_dict()</code>).</li>
+    <li><strong>Precedence (<code>override</code>)</strong>: 
+      <ul>
+        <li><code>override=False</code> (Default): Existing memory keys are preserved.</li>
+        <li><code>override=True</code>: New incoming data replaces existing memory keys.</li>
+      </ul>
+    </li>
+    <li><strong>Dependency Injection</strong>: Can accept a <code>LoggingProtocol</code> compliant object to handle non-blocking error reporting.</li>
+  </ul>
+
+  <h3>Implementation Example</h3>
+<pre><code>from managedsettings import Settings
+from sysloglogger import log_error, log_info, log_warning
+
+class SysLogger:
+    def log_error(self, ident: str, msg: str) -> None: log_error(ident, msg)
+    def log_info(self, ident: str, msg: str) -> None: log_info(ident, msg)
+    def log_warning(self, ident: str, msg: str) -> None: log_warning(ident, msg)
+
+logger = SysLogger()
+
+# Initialize with logger
+session_prefs = Settings(path="~/session.json", logger=logger)
+
+# Merge dict explicitly, update the default path
+session_prefs.merge(path="~/new_session.json", set_path=True, settings={"theme": "dark"})
+</code></pre>
+
+  <hr>
+
+  <h2>3. SyslogLogger Library</h2>
+  <p>A standalone, zero-dependency package providing native system logging.</p>
+  
+  <h3>API</h3>
+  <ul>
+    <li><code>log_error(ident: str, message: str)</code></li>
+    <li><code>log_warning(ident: str, message: str)</code></li>
+    <li><code>log_info(ident: str, message: str)</code></li>
+  </ul>
+
+  <p><strong>Usage:</strong></p>
+<pre><code>import sysloglogger
+
+sysloglogger.log_info("myapp", "Application started gracefully.")
+</code></pre>
+
+  <hr>
+
+  <h2>4. MediaContainer Library (Domain Logic)</h2>
+  <p>The core domain model, cleanly decoupled from external concerns.</p>
+
+  <h3>Primary API: <code>MediaContainer</code></h3>
+  <h4><code>MediaContainer.from_paths(paths, settings=None, logger=None)</code></h4>
+  <p>Identify and group a list of file paths.</p>
+  <ul>
+    <li><strong>Parameters</strong>:
+      <ul>
+        <li><code>paths</code> (<code>list[Path]</code>): Flat list of paths to classify.</li>
+        <li><code>settings</code> (<code>SettingsProtocol | None</code>): Optional injected configuration object.</li>
+        <li><code>logger</code> (<code>LoggingProtocol | None</code>): Optional injected logging object.</li>
+      </ul>
+    </li>
+    <li><strong>Returns</strong>: A sorted list of <code>MediaContainer</code> objects.</li>
+  </ul>
+
+  <h3>Data Model &amp; Output Protocols</h3>
+  <p>When you invoke <code>MediaContainer.from_paths()</code>, the resulting data conforms to strictly typed protocols defined in the codebase.</p>
+
+  <h4>1. <code>ClassifiedFileProtocol</code></h4>
+  <p>Each file scanned by the system is decomposed into a <code>ClassifiedFile</code> object, which exposes the exact anatomical breakdown of the filename:</p>
+  <ul>
+    <li><code>path</code> (<code>Path</code>): The original path of the file.</li>
+    <li><code>file_type</code> (<code>FileType Enum</code>): A defined category (e.g., <code>FileType.VIDEO</code>, <code>FileType.ARCHIVE</code>, <code>FileType.SPLIT_FILE</code>).</li>
+    <li><code>stem</code> (<code>str</code>): The core normalized identity of the file used for clustering.</li>
+    <li><code>qualifier</code> (<code>str | None</code>): Any descriptive suffix stripped from the stem (e.g., <code>"sample"</code>, <code>"screenshot"</code>).</li>
+    <li><code>volume</code> (<code>str | None</code>): The archive volume string if present (e.g., <code>".part1"</code>, <code>".r00"</code>).</li>
+    <li><code>extension</code> (<code>str</code>): The primary recognized extension (e.g., <code>".rar"</code>, <code>".mkv"</code>).</li>
+    <li><code>split</code> (<code>str | None</code>): The numeric split suffix if present (e.g., <code>".001"</code>).</li>
+  </ul>
+
+  <h4>2. <code>MediaContainerProtocol</code></h4>
+  <p>The main return objects (containers) expose a rich set of lists to safely handle their specific execution actions.</p>
+  <ul>
+    <li><code>name</code> (<code>str</code>): The normalized stem identity of the container.</li>
+    <li><code>files</code> (<code>list[ClassifiedFile]</code>): Flat list of <em>all</em> files assigned to the container.</li>
+  </ul>
+
+  <p><strong>Action Contexts (Categorized Lists):</strong></p>
+  <ul>
+    <li><code>playable</code> (<code>list[ClassifiedFile]</code>): Ready-to-use playable content (e.g., videos). Action: <code>none</code>.</li>
+    <li><code>archives</code> (<code>list[ClassifiedFile]</code>): Standard and multipart archives. Action: <code>extract</code>.</li>
+    <li><code>split_media</code> (<code>list[ClassifiedFile]</code>): Raw split files (e.g., <code>.avi.001</code>). Action: <code>stitch</code>.</li>
+    <li><strong>Supporting Lists:</strong> <code>artwork</code>, <code>par_files</code>, <code>text_files</code>, <code>nzb</code>, <code>sample</code>, <code>misc</code>.</li>
+  </ul>
+
+  <p><strong>Computed Properties (Resolution logic):</strong></p>
+  <ul>
+    <li><code>primary_archive</code> (<code>ClassifiedFile | None</code>): The definitive entry-point file for extraction tools (e.g., finding the exact <code>.rar</code> file amidst a sea of <code>.r00</code> files).</li>
+    <li><code>extraction_tool</code> (<code>str | None</code>): The CLI utility required for this container (returns <code>"unrar"</code>, <code>"7z"</code>, <code>"unzip"</code>, or <code>None</code>).</li>
+  </ul>
+
+  <p><strong>Health Flags:</strong></p>
+  <ul>
+    <li><code>scrambled</code> (<code>bool</code>): True if the container stems were obfuscated/hashed (e.g., Usenet obfuscation).</li>
+    <li><code>incomplete</code> (<code>bool</code>): True if the container has archives but is missing its <code>primary_archive</code> entry-point.</li>
+    <li><code>unaffiliated</code> (<code>bool</code>): True for the catch-all container of unmatched outlier files.</li>
+  </ul>
+
+  <hr>
+
+  <h2>5. Methodology (Internal Logic)</h2>
+
+  <div class="methodology">
+    <h3>Stem Extraction (Right-to-Left Peeling)</h3>
+    <p>The library isolates the core identity of a file by iteratively removing structural suffixes:</p>
+    <ol>
+      <li>Splits (<code>.001</code>)</li>
+      <li>Volumes (<code>.r00</code>, <code>.part1</code>)</li>
+      <li>Standard Extensions (<code>.rar</code>, <code>.mkv</code>)</li>
+      <li>Finally stripping trailing qualifiers (<code>-sample</code>, <code>_screenshot</code>).</li>
+    </ol>
+  </div>
+
+  <div class="methodology">
+    <h3>Longest Common Prefix Grouping</h3>
+    <p>Stems are clustered by their shared starting characters. A match generally requires a shared prefix length of at least <strong>70%</strong> of the total stem size.</p>
+    <p>Generic files (like <code>front.jpg</code>) are mapped as accessories and automatically attach themselves to the dominant media container within the directory, regardless of their lack of stem similarity.</p>
+  </div>
+
+  <div class="methodology">
+    <h3>Scrambled Heuristics</h3>
+    <p>If filenames are obfuscated (e.g., pure hexadecimal strings of identical length), the standard longest-common-prefix heuristic is bypassed, and the library automatically regroups the files based on contiguous extension blocks (like a full <code>.r00</code> to <code>.r99</code> sequence).</p>
+  </div>
+
+</body>
+</html>
