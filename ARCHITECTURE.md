@@ -304,3 +304,29 @@ mediacontainer/
 ├── visual.py           — macOS native visual analysis
 └── baked-in-rules.json — baseline parsing DSL
 ```
+
+---
+
+## Deferred
+
+Everything below is outside the core MediaContainer library and deferred to future implementation.
+
+### Nested Archives
+Archives may contain other archives (e.g., zip files containing rar files). The consumer can handle this iteratively: extract, run `from_paths()` on the extracted contents, and repeat.
+
+### Extraction Orchestration
+- Multipart archive extraction (unrar, 7z, zip) using the identified `extraction_tool`.
+- Split media file stitching (concatenation).
+
+### Visual Analysis (AI-Powered)
+For extremely ambiguous image sets, the library aims to leverage small Vision Language Models (VLMs) for semantic grouping.
+
+**Target Model: Moondream2 (1.6B)**
+- **Size**: 1.6 Billion parameters (the smallest realistic floor for high-quality vision understanding).
+- **Resources**: Requires ~2-3GB of RAM/VRAM. Optimized for CPU execution and Apple Silicon (Metal).
+- **Functional Goal**:
+    1. **Semantic Captioning**: Generate a one-sentence description for every image in a "weak" group.
+    2. **Text Similarity Clustering**: Group images whose AI-generated captions share high semantic similarity (e.g., "A photo of a red sports car" and "Side profile of a red vehicle").
+- **Integration Paths**:
+    - **Native Python**: Utilizing the `transformers`, `einops`, and `pillow` libraries for direct in-process execution.
+    - **Ollama API**: Utilizing a local Ollama instance for out-of-process inference via a REST API.

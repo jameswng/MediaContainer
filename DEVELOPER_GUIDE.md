@@ -16,17 +16,19 @@ make setup
 
 The primary interface for a grouped media container.
 
-- `name` (`str`): The normalized stem identity of the container.
+- `name` (`str`): The "Maximal Readable Name" of the container (cleaned and normalized).
+- `lcp` (`str`): The raw, unmodified Longest Common Prefix of the group's files.
+- `stem` (`str`): Alias to `lcp`.
 - `files` (`list[ClassifiedFile]`): All files identified as part of this container.
-- `video` (`list[ClassifiedFile]`): Ready-to-use video content. Action: `none`.
-- `sample` (`list[ClassifiedFile]`): Sample videos (e.g., `-sample.mkv`). Action: `none`.
-- `gallery` (`list[ClassifiedFile]`): Sequential image sets. Action: `none`.
-- `archives` (`list[ClassifiedFile]`): Archives needing extraction. Action: `extract`.
-- `artwork` (`list[ClassifiedFile]`): Covers, screenshots, and other accessory images. Action: `none`.
-- `par_files` (`list[ClassifiedFile]`): PAR and PAR2 recovery files. Action: `none`.
-- `split_media` (`list[ClassifiedFile]`): Split media files needing stitching. Action: `stitch`.
-- `text_files` (`list[ClassifiedFile]`): NFO and TXT files. Action: `none`.
-- `nzb` (`list[ClassifiedFile]`): NZB files. Action: `none`.
+- `video` (`list[ClassifiedFile]`): Ready-to-use video content.
+- `sample` (`list[ClassifiedFile]`): Sample videos (e.g., `-sample.mkv`).
+- `gallery` (`list[ClassifiedFile]`): Sequential image sets.
+- `archives` (`list[ClassifiedFile]`): Archives needing extraction.
+- `artwork` (`list[ClassifiedFile]`): Covers, screenshots, and other accessory images.
+- `par_files` (`list[ClassifiedFile]`): PAR and PAR2 recovery files.
+- `split_media` (`list[ClassifiedFile]`): Split media files needing stitching.
+- `text_files` (`list[ClassifiedFile]`): NFO and TXT files.
+- `nzb` (`list[ClassifiedFile]`): NZB files.
 - `needs_extraction` (`bool`): True if the `archives` list is populated.
 - `extraction_tool` (`str | None`): The recommended tool for extraction (`unrar`, `7z`, `unzip`).
 
@@ -50,7 +52,7 @@ Classifies and groups a list of filesystem paths into one or more `MediaContaine
 - `logger`: (Optional) An object conforming to `LoggingProtocol`.
 
 **Returns:**
-- A list of `MediaContainer` objects, sorted by relevance (playable content first).
+- A list of `MediaContainer` objects, sorted by relevance.
 
 ### `ClassifiedFile` (Protocol)
 
@@ -58,11 +60,13 @@ Represents a single file with its metadata extracted from the filename.
 
 - `path` (`Path`): The original path of the file.
 - `file_type` (`FileType`): The category of the file (VIDEO, IMAGE, ARCHIVE, etc.).
-- `stem` (`str`): The core name of the file after removing all recognized suffixes.
+- `stem` (`str`): The normalized core name (lowercase, space-separated).
+- `raw_stem` (`str`): The unmodified core name string after suffix/sequence removal.
 - `qualifier` (`str | None`): Descriptive suffix (e.g., `sample`, `subs`).
 - `volume` (`str | None`): Multipart indicator (e.g., `.part1`, `.r00`).
 - `extension` (`str`): The file type extension (e.g., `.mkv`).
 - `split` (`str | None`): Numeric split suffix (e.g., `.001`).
+- `sequence` (`str | None`): The numeric sequence extracted for galleries.
 
 ---
 
@@ -87,22 +91,22 @@ Represents a single file with its metadata extracted from the filename.
 
 ## Methodology
 
-### Stem Extraction (Right-to-Left Peeling)
+### Rule-based Parser (DSL)
 
-Stems are identified by iteratively peeling suffixes from the filename until a base name remains.
+Stems are identified by a declarative `Parser` that applies a set of ordered rules from `baked-in-rules.json`. Consumers can extend this via `parser_rules` in their settings.
 
-1.  **Peel Split**: Removes `.001` through `.999`.
-2.  **Peel Volume**: Removes `.partN`, `.rNN`, `.sNN`, and `.volNN+NN`.
-3.  **Peel Extension**: Removes known extensions like `.mkv`, `.rar`, `.jpg`.
-4.  **Repeat**: Steps 1-3 are repeated in a loop to handle compound suffixes like `.rar.001`.
-5.  **Peel Sequence**: Removes trailing digits from image names to identify galleries.
-6.  **Strip Qualifier**: Removes recognized descriptive tokens like `-sample` or `_screenshot`.
-7.  **Normalize**: Converts to lowercase and replaces word separators (dots, underscores) with spaces.
+1.  **Peel**: Removes suffixes like `.001`, `.r00`, or `.mkv`.
+2.  **Strip**: Removes qualifiers like `-sample`.
+3.  **Heuristic**: Mid-string numeric sequences are identified and extracted for image galleries.
 
-### Grouping (Longest Common Prefix)
+### Grouping & Visual Analysis
 
-Stems are clustered using a 70% prefix-matching heuristic. Generic accessory names (e.g., `front.jpg`, `cover.png`) are automatically attached to the dominant media group in the directory.
+Files are primarily grouped by their normalized stems using a longest common prefix algorithm.
 
-### Scrambled Detection
+**Visual Fallback**: For image sets with generic names (e.g., `1.jpg`, `2.jpg`), the library uses macOS-native `sips` to perform:
+- **Structural Matching**: Average Hashing (aHash) to detect resized versions.
+- **Pictorial Matching**: Color Histogram correlation to identify photos from the samePictorial or scene.
 
-Files with high-entropy stems (hashes, random strings) of uniform length are grouped together based on their extension patterns rather than their stems.
+### Container Naming
+
+The `MediaContainer.name` is generated by taking the unmodified LCP of primary media files and applying a "Maximal Readable" normalization that preserves user style (dominant separator detection) while stripping metadata brackets.

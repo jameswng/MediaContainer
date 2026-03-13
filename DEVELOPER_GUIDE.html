@@ -1,238 +1,176 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 2rem;
-    background-color: #f9f9fb;
-  }
-  h1 {
-    color: #2c3e50;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 0.5rem;
-    font-size: 2.5em;
-  }
-  h2 {
-    color: #2980b9;
-    margin-top: 2rem;
-    border-bottom: 1px solid #bdc3c7;
-    padding-bottom: 0.3rem;
-  }
-  h3 {
-    color: #8e44ad;
-  }
-  h4 {
-    color: #e67e22;
-  }
-  p, li {
-    font-size: 1.05em;
-  }
-  code {
-    background-color: #fdf6e3;
-    color: #c0392b;
-    padding: 0.2em 0.4em;
-    border-radius: 3px;
-    font-family: "Courier New", Courier, monospace;
-    font-size: 0.95em;
-  }
-  pre {
-    background-color: #2c3e50;
-    color: #ecf0f1;
-    padding: 1rem;
-    border-radius: 5px;
-    overflow-x: auto;
-  }
-  pre code {
-    background-color: transparent;
-    color: inherit;
-    padding: 0;
-  }
-  hr {
-    border: 0;
-    height: 1px;
-    background: #ecf0f1;
-    margin: 2rem 0;
-  }
-  ul {
-    padding-left: 20px;
-  }
-  li {
-    margin-bottom: 0.5rem;
-  }
-  .highlight {
-    color: #27ae60;
-    font-weight: bold;
-  }
-  .methodology {
-    background-color: #e8f8f5;
-    border-left: 4px solid #2ecc71;
-    padding: 1rem;
-    margin: 1rem 0;
-  }
-</style>
-</head>
-<body>
-
-  <h1>MediaContainer — Developer's Guide</h1>
-  <p>This guide provides a comprehensive reference for developers consuming the <code>mediacontainer</code>, <code>managedsettings</code>, and <code>sysloglogger</code> libraries within this workspace.</p>
-
-  <h2>1. Installation &amp; Environment</h2>
-  <p>The workspace provides isolated, standard environments and tasks managed via <code>make</code>.</p>
-  <ul>
-    <li><code>make setup</code>: Initializes the environment and installs dependencies.</li>
-    <li><code>make test</code>: Executes the test suite via <code>pytest</code>.</li>
-    <li><code>make lint</code>: Executes static analysis via <code>ruff</code>.</li>
-    <li><code>make format</code>: Automatically applies code formatting.</li>
-  </ul>
-  <p>All binaries and scripts in this project are <span class="highlight">Environment-Clean Safe</span>; they dynamically resolve their paths and strip user-local variables to ensure deterministic execution environments.</p>
-
-  <hr>
-
-  <h2>2. ManagedSettings (SettingsProtocol)</h2>
-  <p>A standalone, persistent configuration library.</p>
-  
-  <h3>Core Concepts</h3>
-  <ul>
-    <li><strong>Explicit Path Control</strong>: Methods accepting a <code>path</code> parameter will only update the instance's "sticky" internal path if <code>set_path=True</code> is provided.</li>
-    <li><strong>Polymorphic Input</strong>: The <code>settings</code> parameter accepts either a standard Python <code>dict</code> or another object implementing the <code>SettingsProtocol</code> (providing <code>as_dict()</code>).</li>
-    <li><strong>Precedence (<code>override</code>)</strong>: 
-      <ul>
-        <li><code>override=False</code> (Default): Existing memory keys are preserved.</li>
-        <li><code>override=True</code>: New incoming data replaces existing memory keys.</li>
-      </ul>
-    </li>
-    <li><strong>Dependency Injection</strong>: Can accept a <code>LoggingProtocol</code> compliant object to handle non-blocking error reporting.</li>
-  </ul>
-
-  <h3>Implementation Example</h3>
-<pre><code>from managedsettings import Settings
-from sysloglogger import log_error, log_info, log_warning
-
-class SysLogger:
-    def log_error(self, ident: str, msg: str) -> None: log_error(ident, msg)
-    def log_info(self, ident: str, msg: str) -> None: log_info(ident, msg)
-    def log_warning(self, ident: str, msg: str) -> None: log_warning(ident, msg)
-
-logger = SysLogger()
-
-# Initialize with logger
-session_prefs = Settings(path="~/session.json", logger=logger)
-
-# Merge dict explicitly, update the default path
-session_prefs.merge(path="~/new_session.json", set_path=True, settings={"theme": "dark"})
-</code></pre>
-
-  <hr>
-
-  <h2>3. SyslogLogger Library</h2>
-  <p>A standalone, zero-dependency package providing native system logging.</p>
-  
-  <h3>API</h3>
-  <ul>
-    <li><code>log_error(ident: str, message: str)</code></li>
-    <li><code>log_warning(ident: str, message: str)</code></li>
-    <li><code>log_info(ident: str, message: str)</code></li>
-  </ul>
-
-  <p><strong>Usage:</strong></p>
-<pre><code>import sysloglogger
-
-sysloglogger.log_info("myapp", "Application started gracefully.")
-</code></pre>
-
-  <hr>
-
-  <h2>4. MediaContainer Library (Domain Logic)</h2>
-  <p>The core domain model, cleanly decoupled from external concerns.</p>
-
-  <h3>Primary API: <code>MediaContainer</code></h3>
-  <h4><code>MediaContainer.from_paths(paths, settings=None, logger=None)</code></h4>
-  <p>Identify and group a list of file paths.</p>
-  <ul>
-    <li><strong>Parameters</strong>:
-      <ul>
-        <li><code>paths</code> (<code>list[Path]</code>): Flat list of paths to classify.</li>
-        <li><code>settings</code> (<code>SettingsProtocol | None</code>): Optional injected configuration object.</li>
-        <li><code>logger</code> (<code>LoggingProtocol | None</code>): Optional injected logging object.</li>
-      </ul>
-    </li>
-    <li><strong>Returns</strong>: A sorted list of <code>MediaContainer</code> objects.</li>
-  </ul>
-
-  <h3>Data Model &amp; Output Protocols</h3>
-  <p>When you invoke <code>MediaContainer.from_paths()</code>, the resulting data conforms to strictly typed protocols defined in the codebase.</p>
-
-  <h4>1. <code>ClassifiedFileProtocol</code></h4>
-  <p>Each file scanned by the system is decomposed into a <code>ClassifiedFile</code> object, which exposes the exact anatomical breakdown of the filename:</p>
-  <ul>
-    <li><code>path</code> (<code>Path</code>): The original path of the file.</li>
-    <li><code>file_type</code> (<code>FileType Enum</code>): A defined category (e.g., <code>FileType.VIDEO</code>, <code>FileType.ARCHIVE</code>, <code>FileType.SPLIT_FILE</code>).</li>
-    <li><code>stem</code> (<code>str</code>): The core normalized identity of the file used for clustering.</li>
-    <li><code>qualifier</code> (<code>str | None</code>): Any descriptive suffix stripped from the stem (e.g., <code>"sample"</code>, <code>"screenshot"</code>).</li>
-    <li><code>volume</code> (<code>str | None</code>): The archive volume string if present (e.g., <code>".part1"</code>, <code>".r00"</code>).</li>
-    <li><code>extension</code> (<code>str</code>): The primary recognized extension (e.g., <code>".rar"</code>, <code>".mkv"</code>).</li>
-    <li><code>split</code> (<code>str | None</code>): The numeric split suffix if present (e.g., <code>".001"</code>).</li>
-  </ul>
-
-  <h4>2. <code>MediaContainerProtocol</code></h4>
-  <p>The main return objects (containers) expose a rich set of lists to safely handle their specific execution actions.</p>
-  <ul>
-    <li><code>name</code> (<code>str</code>): The normalized stem identity of the container.</li>
-    <li><code>files</code> (<code>list[ClassifiedFile]</code>): Flat list of <em>all</em> files assigned to the container.</li>
-  </ul>
-
-  <p><strong>Action Contexts (Categorized Lists):</strong></p>
-  <ul>
-    <li><code>playable</code> (<code>list[ClassifiedFile]</code>): Ready-to-use playable content (e.g., videos). Action: <code>none</code>.</li>
-    <li><code>archives</code> (<code>list[ClassifiedFile]</code>): Standard and multipart archives. Action: <code>extract</code>.</li>
-    <li><code>split_media</code> (<code>list[ClassifiedFile]</code>): Raw split files (e.g., <code>.avi.001</code>). Action: <code>stitch</code>.</li>
-    <li><strong>Supporting Lists:</strong> <code>artwork</code>, <code>par_files</code>, <code>text_files</code>, <code>nzb</code>, <code>sample</code>, <code>misc</code>.</li>
-  </ul>
-
-  <p><strong>Computed Properties (Resolution logic):</strong></p>
-  <ul>
-    <li><code>primary_archive</code> (<code>ClassifiedFile | None</code>): The definitive entry-point file for extraction tools (e.g., finding the exact <code>.rar</code> file amidst a sea of <code>.r00</code> files).</li>
-    <li><code>extraction_tool</code> (<code>str | None</code>): The CLI utility required for this container (returns <code>"unrar"</code>, <code>"7z"</code>, <code>"unzip"</code>, or <code>None</code>).</li>
-  </ul>
-
-  <p><strong>Health Flags:</strong></p>
-  <ul>
-    <li><code>scrambled</code> (<code>bool</code>): True if the container stems were obfuscated/hashed (e.g., Usenet obfuscation).</li>
-    <li><code>incomplete</code> (<code>bool</code>): True if the container has archives but is missing its <code>primary_archive</code> entry-point.</li>
-    <li><code>unaffiliated</code> (<code>bool</code>): True for the catch-all container of unmatched outlier files.</li>
-  </ul>
-
-  <hr>
-
-  <h2>5. Methodology (Internal Logic)</h2>
-
-  <div class="methodology">
-    <h3>Stem Extraction (Right-to-Left Peeling)</h3>
-    <p>The library isolates the core identity of a file by iteratively removing structural suffixes:</p>
-    <ol>
-      <li>Splits (<code>.001</code>)</li>
-      <li>Volumes (<code>.r00</code>, <code>.part1</code>)</li>
-      <li>Standard Extensions (<code>.rar</code>, <code>.mkv</code>)</li>
-      <li>Finally stripping trailing qualifiers (<code>-sample</code>, <code>_screenshot</code>).</li>
-    </ol>
-  </div>
-
-  <div class="methodology">
-    <h3>Longest Common Prefix Grouping</h3>
-    <p>Stems are clustered by their shared starting characters. A match generally requires a shared prefix length of at least <strong>70%</strong> of the total stem size.</p>
-    <p>Generic files (like <code>front.jpg</code>) are mapped as accessories and automatically attach themselves to the dominant media container within the directory, regardless of their lack of stem similarity.</p>
-  </div>
-
-  <div class="methodology">
-    <h3>Scrambled Heuristics</h3>
-    <p>If filenames are obfuscated (e.g., pure hexadecimal strings of identical length), the standard longest-common-prefix heuristic is bypassed, and the library automatically regroups the files based on contiguous extension blocks (like a full <code>.r00</code> to <code>.r99</code> sequence).</p>
-  </div>
-
-</body>
-</html>
+<h1 id="mediacontainer-developers-guide">MediaContainer — Developer’s
+Guide</h1>
+<blockquote>
+<p>Primary documentation for MediaContainer library consumers.</p>
+</blockquote>
+<h2 id="installation">Installation</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/iam/MediaContainer.git</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> MediaContainer</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> setup</span></code></pre></div>
+<h2 id="api-documentation">API Documentation</h2>
+<h3 id="mediacontainer-protocol"><code>MediaContainer</code>
+(Protocol)</h3>
+<p>The primary interface for a grouped media container.</p>
+<ul>
+<li><code>name</code> (<code>str</code>): The “Maximal Readable Name” of
+the container (cleaned and normalized).</li>
+<li><code>lcp</code> (<code>str</code>): The raw, unmodified Longest
+Common Prefix of the group’s files.</li>
+<li><code>stem</code> (<code>str</code>): Alias to
+<code>lcp</code>.</li>
+<li><code>files</code> (<code>list[ClassifiedFile]</code>): All files
+identified as part of this container.</li>
+<li><code>video</code> (<code>list[ClassifiedFile]</code>): Ready-to-use
+video content.</li>
+<li><code>sample</code> (<code>list[ClassifiedFile]</code>): Sample
+videos (e.g., <code>-sample.mkv</code>).</li>
+<li><code>gallery</code> (<code>list[ClassifiedFile]</code>): Sequential
+image sets.</li>
+<li><code>archives</code> (<code>list[ClassifiedFile]</code>): Archives
+needing extraction.</li>
+<li><code>artwork</code> (<code>list[ClassifiedFile]</code>): Covers,
+screenshots, and other accessory images.</li>
+<li><code>par_files</code> (<code>list[ClassifiedFile]</code>): PAR and
+PAR2 recovery files.</li>
+<li><code>split_media</code> (<code>list[ClassifiedFile]</code>): Split
+media files needing stitching.</li>
+<li><code>text_files</code> (<code>list[ClassifiedFile]</code>): NFO and
+TXT files.</li>
+<li><code>nzb</code> (<code>list[ClassifiedFile]</code>): NZB
+files.</li>
+<li><code>needs_extraction</code> (<code>bool</code>): True if the
+<code>archives</code> list is populated.</li>
+<li><code>extraction_tool</code> (<code>str | None</code>): The
+recommended tool for extraction (<code>unrar</code>, <code>7z</code>,
+<code>unzip</code>).</li>
+</ul>
+<h3
+id="mediacontainer.from_paths"><code>MediaContainer.from_paths()</code></h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">@classmethod</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> from_paths(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    cls, </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    paths: <span class="bu">list</span>[Path], </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    settings: SettingsProtocol <span class="op">|</span> <span class="va">None</span> <span class="op">=</span> <span class="va">None</span>, </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    logger: LoggingProtocol <span class="op">|</span> <span class="va">None</span> <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> <span class="bu">list</span>[MediaContainer]:</span></code></pre></div>
+<p>Classifies and groups a list of filesystem paths into one or more
+<code>MediaContainer</code> instances.</p>
+<p><strong>Parameters:</strong> - <code>paths</code>: A list of
+<code>pathlib.Path</code> objects to process. - <code>settings</code>:
+(Optional) An object conforming to <code>SettingsProtocol</code>. -
+<code>logger</code>: (Optional) An object conforming to
+<code>LoggingProtocol</code>.</p>
+<p><strong>Returns:</strong> - A list of <code>MediaContainer</code>
+objects, sorted by relevance.</p>
+<h3 id="classifiedfile-protocol"><code>ClassifiedFile</code>
+(Protocol)</h3>
+<p>Represents a single file with its metadata extracted from the
+filename.</p>
+<ul>
+<li><code>path</code> (<code>Path</code>): The original path of the
+file.</li>
+<li><code>file_type</code> (<code>FileType</code>): The category of the
+file (VIDEO, IMAGE, ARCHIVE, etc.).</li>
+<li><code>stem</code> (<code>str</code>): The normalized core name
+(lowercase, space-separated).</li>
+<li><code>raw_stem</code> (<code>str</code>): The unmodified core name
+string after suffix/sequence removal.</li>
+<li><code>qualifier</code> (<code>str | None</code>): Descriptive suffix
+(e.g., <code>sample</code>, <code>subs</code>).</li>
+<li><code>volume</code> (<code>str | None</code>): Multipart indicator
+(e.g., <code>.part1</code>, <code>.r00</code>).</li>
+<li><code>extension</code> (<code>str</code>): The file type extension
+(e.g., <code>.mkv</code>).</li>
+<li><code>split</code> (<code>str | None</code>): Numeric split suffix
+(e.g., <code>.001</code>).</li>
+<li><code>sequence</code> (<code>str | None</code>): The numeric
+sequence extracted for galleries.</li>
+</ul>
+<hr />
+<h2 id="data-model">Data Model</h2>
+<h3 id="filetype-enum"><code>FileType</code> (Enum)</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VIDEO</code></td>
+<td>Movie and TV show video files.</td>
+</tr>
+<tr>
+<td><code>IMAGE</code></td>
+<td>Standalone images (covers, posters).</td>
+</tr>
+<tr>
+<td><code>GALLERY</code></td>
+<td>Sequential image sets (e.g., image001.jpg, image002.jpg).</td>
+</tr>
+<tr>
+<td><code>ARCHIVE</code></td>
+<td>Single-volume archives (zip, 7z).</td>
+</tr>
+<tr>
+<td><code>MULTIPART_ARCHIVE</code></td>
+<td>Volumes of a multipart archive (rar, part1.rar).</td>
+</tr>
+<tr>
+<td><code>SPLIT_FILE</code></td>
+<td>Generic numeric splits (.001).</td>
+</tr>
+<tr>
+<td><code>PAR</code>, <code>PAR2</code></td>
+<td>Parity recovery files.</td>
+</tr>
+<tr>
+<td><code>TEXT</code></td>
+<td>Metadata and readme files (nfo, txt).</td>
+</tr>
+<tr>
+<td><code>NZB</code></td>
+<td>Usenet index files.</td>
+</tr>
+<tr>
+<td><code>OTHER</code></td>
+<td>Unrecognized files.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="methodology">Methodology</h2>
+<h3 id="rule-based-parser-dsl">Rule-based Parser (DSL)</h3>
+<p>Stems are identified by a declarative <code>Parser</code> that
+applies a set of ordered rules from <code>baked-in-rules.json</code>.
+Consumers can extend this via <code>parser_rules</code> in their
+settings.</p>
+<ol type="1">
+<li><strong>Peel</strong>: Removes suffixes like <code>.001</code>,
+<code>.r00</code>, or <code>.mkv</code>.</li>
+<li><strong>Strip</strong>: Removes qualifiers like
+<code>-sample</code>.</li>
+<li><strong>Heuristic</strong>: Mid-string numeric sequences are
+identified and extracted for image galleries.</li>
+</ol>
+<h3 id="grouping-visual-analysis">Grouping &amp; Visual Analysis</h3>
+<p>Files are primarily grouped by their normalized stems using a longest
+common prefix algorithm.</p>
+<p><strong>Visual Fallback</strong>: For image sets with generic names
+(e.g., <code>1.jpg</code>, <code>2.jpg</code>), the library uses
+macOS-native <code>sips</code> to perform: - <strong>Structural
+Matching</strong>: Average Hashing (aHash) to detect resized versions. -
+<strong>Pictorial Matching</strong>: Color Histogram correlation to
+identify photos from the samePictorial or scene.</p>
+<h3 id="container-naming">Container Naming</h3>
+<p>The <code>MediaContainer.name</code> is generated by taking the
+unmodified LCP of primary media files and applying a “Maximal Readable”
+normalization that preserves user style (dominant separator detection)
+while stripping metadata brackets.</p>
