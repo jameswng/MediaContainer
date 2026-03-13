@@ -62,7 +62,7 @@ EXPECTATIONS: dict[str, Expected] = {
         container_count=1,
         containers=[{
             "file_count": 3,
-            "has_playable": True,
+            "has_video": True,
             "has_archives": False,
             "has_text": True,
         }],
@@ -70,7 +70,7 @@ EXPECTATIONS: dict[str, Expected] = {
     "video_with_sample": Expected(
         container_count=1,
         containers=[{
-            "has_playable": True,
+            "has_video": True,
             "has_sample": True,
             "has_artwork": True,
             "has_text": True,
@@ -84,6 +84,7 @@ EXPECTATIONS: dict[str, Expected] = {
         container_count=1,
         containers=[{
             "file_count": 13,
+            "has_gallery": True,
         }],
     ),
     "split_media": Expected(
@@ -121,7 +122,7 @@ EXPECTATIONS: dict[str, Expected] = {
     "mixed_video_and_archive": Expected(
         container_count=1,
         containers=[{
-            "has_playable": True,
+            "has_video": True,
             "has_archives": True,
             "has_artwork": True,
             "has_text": True,
@@ -229,7 +230,7 @@ EXPECTATIONS: dict[str, Expected] = {
         container_count=1,
         containers=[{
             "file_count": 4,
-            "has_playable": True,
+            "has_video": True,
             "has_sample": True,
             "has_artwork": True,
         }],
@@ -238,21 +239,21 @@ EXPECTATIONS: dict[str, Expected] = {
         container_count=1,
         containers=[{
             "file_count": 3,
-            "has_playable": True,
+            "has_video": True,
         }],
     ),
     "multi_version_movie": Expected(
         container_count=2,
         containers=[
-            {"file_count": 1, "has_playable": True},
-            {"file_count": 1, "has_playable": True},
+            {"file_count": 1, "has_video": True},
+            {"file_count": 1, "has_video": True},
         ],
     ),
     "complex_dots_underscores": Expected(
         container_count=1,
         containers=[{
             "file_count": 2,
-            "has_playable": True,
+            "has_video": True,
             "has_text": True,
         }],
     ),
@@ -260,7 +261,7 @@ EXPECTATIONS: dict[str, Expected] = {
         container_count=1,
         containers=[{
             "file_count": 3,
-            "has_playable": True,
+            "has_video": True,
             "has_text": True,
         }],
     ),
@@ -272,24 +273,23 @@ EXPECTATIONS: dict[str, Expected] = {
         }],
     ),
     "many_accessories": Expected(
-        container_count=2,
+        container_count=1,
         containers=[
-            {"file_count": 5, "has_playable": True, "has_artwork": True},
-            {"file_count": 1, "has_artwork": True},
+            {"file_count": 6, "has_video": True, "has_artwork": True},
         ],
     ),
     "near_duplicates": Expected(
         container_count=1,
         containers=[{
             "file_count": 2,
-            "has_playable": True,
+            "has_video": True,
         }],
     ),
     "subtitles_set": Expected(
         container_count=1,
         containers=[{
             "file_count": 4,
-            "has_playable": True,
+            "has_video": True,
         }],
     ),
     "mixed_archives_types": Expected(
@@ -310,22 +310,22 @@ EXPECTATIONS: dict[str, Expected] = {
         container_count=1,
         containers=[{
             "file_count": 2,
-            "has_playable": True,
+            "has_video": True,
             "has_text": True,
         }],
     ),
     "numeric_stems": Expected(
         container_count=2,
         containers=[
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 1, "has_playable": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 1, "has_video": True},
         ],
     ),
     "dashed_stems": Expected(
         container_count=2,
         containers=[
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 1, "has_playable": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 1, "has_video": True},
         ],
     ),
     "multipart_par2_complex": Expected(
@@ -339,7 +339,7 @@ EXPECTATIONS: dict[str, Expected] = {
     "whitespace_filenames": Expected(
         container_count=3,
         containers=[
-            {"file_count": 2, "has_playable": True, "has_text": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
             {"file_count": 2, "has_archives": True},
             {"file_count": 1, "has_text": True},
         ],
@@ -347,26 +347,61 @@ EXPECTATIONS: dict[str, Expected] = {
     "metacharacter_filenames": Expected(
         container_count=8,
         containers=[
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 1, "has_playable": True},
-            {"file_count": 1, "has_playable": True},
-            {"file_count": 1, "has_playable": True},
-            {"file_count": 1, "has_playable": True},
-            {"file_count": 1, "has_playable": True},
-            {"file_count": 1, "has_playable": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 1, "has_video": True},
+            {"file_count": 1, "has_video": True},
+            {"file_count": 1, "has_video": True},
+            {"file_count": 1, "has_video": True},
+            {"file_count": 1, "has_video": True},
+            {"file_count": 1, "has_video": True},
         ],
     ),
     "unicode_filenames": Expected(
         container_count=6,
         containers=[
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 2, "has_playable": True, "has_text": True},
-            {"file_count": 2, "has_playable": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 2, "has_video": True, "has_text": True},
+            {"file_count": 2, "has_video": True},
             {"file_count": 2, "has_archives": True, "has_par": True},
             {"file_count": 2, "has_artwork": True},
         ],
+    ),
+    "minimal_image_stems": Expected(
+        container_count=3, # 1-10 group, (1)-(3) group, 01-03 group
+    ),
+    "mid_string_sequence": Expected(
+        container_count=1,
+        containers=[{
+            "name": "Holiday_Paris_Eiffel",
+            "has_gallery": True,
+            "has_text": True,
+        }],
+    ),
+    "bracketed_index": Expected(
+        container_count=1,
+        containers=[{
+            "name": "Vacation",
+            "has_gallery": True,
+            "has_text": True,
+        }],
+    ),
+    "dominant_separator": Expected(
+        container_count=1,
+        containers=[{
+            "name": "My_Cool_Release",
+            "has_gallery": True,
+            "has_text": True,
+        }],
+    ),
+    "mixed_separators": Expected(
+        container_count=1,
+        containers=[{
+            "name": "Project.Name.Task",
+            "has_gallery": True,
+            "has_text": True,
+        }],
     ),
 }
 
@@ -393,16 +428,20 @@ def load_real_directory(path: Path) -> list[Path]:
 def check_container(container: MediaContainer, expected: dict) -> None:
     """Assert expected attributes on a MediaContainer."""
     for attr, value in expected.items():
-        if attr == "file_count":
+        if attr == "name":
+            assert container.name == value, f"Expected name '{value}', got '{container.name}'"
+        elif attr == "file_count":
             assert len(container.files) == value, (
                 f"Expected {value} files, got {len(container.files)}"
             )
         elif attr == "has_archives":
             assert bool(container.archives) == value
-        elif attr == "has_playable":
-            assert bool(container.playable) == value
+        elif attr == "has_video":
+            assert bool(container.video) == value
         elif attr == "has_sample":
             assert bool(container.sample) == value
+        elif attr == "has_gallery":
+            assert bool(container.gallery) == value
         elif attr == "has_artwork":
             assert bool(container.artwork) == value
         elif attr == "has_par":

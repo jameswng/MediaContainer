@@ -9,7 +9,7 @@
 - **TestStemExtraction**: Parametrized tests for peeling and stripping suffixes.
 - **TestFileClassification**: Verifies correct `FileType` and attribute assignment.
 - **TestGrouping**: Validates longest common prefix-based clustering of files into containers.
-- **TestScrambledDetection**: Confirms obfuscated filename patterns are correctly handled.
+- **TestScrambledDetection**: Confirms obfuscated filename patterns front correctly handled.
 
 ## Program Flow
 1. Sets up test data and expected outcomes.
@@ -32,58 +32,71 @@ from mediacontainer.media_container import ClassifiedFile, FileType, MediaContai
 class TestStemExtraction:
     """Test the iterative peel/strip/normalize algorithm."""
 
-    @pytest.mark.parametrize("filename, expected_stem", [
+    @pytest.mark.parametrize("filename, expected_stem, expected_seq", [
         # Basic extensions
-        ("release.rar", "release"),
-        ("release.zip", "release"),
-        ("release.7z", "release"),
-        ("movie.mkv", "movie"),
-        ("movie.avi", "movie"),
-        ("movie.mp4", "movie"),
-        ("image.jpg", "image"),
-        ("info.nfo", "info"),
-        ("info.txt", "info"),
-        ("file.nzb", "file"),
+        ("release.rar", "release", None),
+        ("release.zip", "release", None),
+        ("release.7z", "release", None),
+        ("movie.mkv", "movie", None),
+        ("movie.avi", "movie", None),
+        ("movie.mp4", "movie", None),
+        ("image.jpg", "image", None),
+        ("info.nfo", "info", None),
+        ("info.txt", "info", None),
+        ("file.nzb", "file", None),
         # Rar volumes
-        ("release.r00", "release"),
-        ("release.r99", "release"),
-        ("release.s00", "release"),
+        ("release.r00", "release", None),
+        ("release.r99", "release", None),
+        ("release.s00", "release", None),
         # Part notation
-        ("release.part1.rar", "release"),
-        ("release.part01.rar", "release"),
-        ("release.part001.rar", "release"),
+        ("release.part1.rar", "release", None),
+        ("release.part01.rar", "release", None),
+        ("release.part001.rar", "release", None),
         # Numeric splits
-        ("release.rar.001", "release"),
-        ("release.rar.002", "release"),
-        ("movie.avi.001", "movie"),
-        ("archive.7z.001", "archive"),
+        ("release.rar.001", "release", None),
+        ("release.rar.002", "release", None),
+        ("movie.avi.001", "movie", None),
+        ("archive.7z.001", "archive", None),
         # Par2 with volumes
-        ("release.par2", "release"),
-        ("release.vol0+1.par2", "release"),
-        ("release.vol000+01.par2", "release"),
-        ("release.vol001+02.par2", "release"),
+        ("release.par2", "release", None),
+        ("release.vol0+1.par2", "release", None),
+        ("release.vol000+01.par2", "release", None),
+        ("release.vol001+02.par2", "release", None),
         # Qualifiers stripped
-        ("release-sample.avi", "release"),
-        ("release_sample.mkv", "release"),
-        ("release_screenshot.jpg", "release"),
-        ("release-subs.rar", "release"),
-        ("release-proof.jpg", "release"),
-        ("release-covers.rar", "release"),
+        ("release-sample.avi", "release", None),
+        ("release_sample.mkv", "release", None),
+        ("release_screenshot.jpg", "release", None),
+        ("release-subs.rar", "release", None),
+        ("release-proof.jpg", "release", None),
+        ("release-covers.rar", "release", None),
+        # Numeric sequences
+        ("flowers_001.jpg", "flowers", "001"),
+        ("flowers-002.png", "flowers", "002"),
+        ("flowers.003.webp", "flowers", "003"),
+        ("vacation123.jpg", "vacation", "123"),
         # Dots/underscores normalized to spaces
-        ("My.Cool.Release-GRP.rar", "my cool release-grp"),
-        ("My_Cool_Release-GRP.r00", "my cool release-grp"),
+        ("My.Cool.Release-GRP.rar", "my cool release-grp", None),
+        ("My_Cool_Release-GRP.r00", "my cool release-grp", None),
         # Hyphens preserved
-        ("Release-GRP.rar", "release-grp"),
+        ("Release-GRP.rar", "release-grp", None),
         # Accessory names stay as-is (no qualifier to strip)
-        ("front.jpg", "front"),
-        ("back.jpg", "back"),
-        ("cover.png", "cover"),
-        ("screen.jpg", "screen"),
-        ("index.jpg", "index"),
+        ("front.jpg", "front", None),
+        ("back.jpg", "back", None),
+        ("cover.png", "cover", None),
+        ("screen.jpg", "screen", None),
+        ("index.jpg", "index", None),
+        # Mid-string sequences
+        ("Holiday_Paris_01_Eiffel.jpg", "holiday paris eiffel", "01"),
+        ("Holiday_Paris_02_Eiffel.jpg", "holiday paris eiffel", "02"),
+        ("Vacation-001-Beach.png", "vacation beach", "001"),
+        ("Vacation-002-Beach.png", "vacation beach", "002"),
+        ("Holiday (01).jpg", "holiday", "01"),
+        ("Holiday (02).jpg", "holiday", "02"),
     ])
-    def test_stem_extraction(self, filename, expected_stem):
+    def test_stem_and_sequence_extraction(self, filename, expected_stem, expected_seq):
         cf = ClassifiedFile.from_filename(filename)
         assert cf.stem == expected_stem
+        assert cf.sequence == expected_seq
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +121,9 @@ class TestFileClassification:
         ("image.gif", FileType.IMAGE),
         ("image.bmp", FileType.IMAGE),
         ("image.webp", FileType.IMAGE),
+        ("flowers_001.jpg", FileType.GALLERY),
+        ("vacation.001.png", FileType.GALLERY),
+        ("image.jpg.001", FileType.GALLERY),
         ("archive.rar", FileType.ARCHIVE),
         ("archive.zip", FileType.ARCHIVE),
         ("archive.7z", FileType.ARCHIVE),
@@ -227,7 +243,7 @@ class TestGrouping:
         ])
         containers = MediaContainer.from_paths(paths)
         assert len(containers) == 1
-        assert len(containers[0].playable) == 1
+        assert len(containers[0].video) == 1
 
     def test_video_with_sample(self):
         paths = self._paths([
@@ -237,10 +253,10 @@ class TestGrouping:
         ])
         containers = MediaContainer.from_paths(paths)
         assert len(containers) == 1
-        assert len(containers[0].playable) == 1
+        assert len(containers[0].video) == 1
         assert len(containers[0].sample) == 1
 
-    def test_image_set(self):
+    def test_image_set_is_gallery(self):
         paths = self._paths([
             "flowers_001.jpg",
             "flowers_002.jpg",
@@ -250,6 +266,8 @@ class TestGrouping:
         ])
         containers = MediaContainer.from_paths(paths)
         assert len(containers) == 1
+        assert len(containers[0].gallery) == 3
+        assert len(containers[0].artwork) == 2
 
     def test_empty_input(self):
         containers = MediaContainer.from_paths([])
@@ -258,7 +276,7 @@ class TestGrouping:
     def test_single_file_valid_type(self):
         containers = MediaContainer.from_paths([Path("movie.mkv")])
         assert len(containers) == 1
-        assert len(containers[0].playable) == 1
+        assert len(containers[0].video) == 1
 
     def test_accessory_images_attach_to_dominant(self):
         paths = self._paths([
@@ -283,6 +301,45 @@ class TestGrouping:
         unaffiliated = [c for c in containers if c.unaffiliated]
         assert len(unaffiliated) == 1
         assert len(unaffiliated[0].files) == 3
+
+    def test_custom_parser_rule(self):
+        class MockSettings:
+            path = None
+            def get(self, key, default=None):
+                if key == "parser_rules":
+                    return [{"name": "camera", "pattern": r"CAM-\d+", "action": "strip", "scope": "global"}]
+                return default
+            def set(self, key, value, save=False): pass
+
+        settings = MockSettings()
+        cf = ClassifiedFile.from_filename("CAM-123_Holiday.jpg", settings=settings)
+        # Normalization changes CAM to cam and _ to space, strip rule removes CAM-123
+        assert cf.stem == "holiday"
+
+    def test_maximal_readable_naming(self):
+        paths = self._paths([
+            "Holiday_Paris_01_Eiffel.jpg",
+            "Holiday_Paris_02_Eiffel.jpg",
+        ])
+        containers = MediaContainer.from_paths(paths)
+        assert len(containers) == 1
+        mc = containers[0]
+        # LCP should capture the preserved case and separators
+        assert "Holiday_Paris" in mc.lcp
+        assert "Eiffel" in mc.lcp
+        # Name should use the dominant separator (_)
+        assert mc.name == "Holiday_Paris_Eiffel"
+
+    def test_bracketed_naming(self):
+        paths = self._paths([
+            "Vacation (01).jpg",
+            "Vacation (02).jpg",
+        ])
+        containers = MediaContainer.from_paths(paths)
+        assert len(containers) == 1
+        mc = containers[0]
+        assert mc.name == "Vacation"
+        assert mc.lcp.startswith("Vacation")
 
 
 # ---------------------------------------------------------------------------
@@ -475,12 +532,12 @@ class TestOrdering:
         names = [f.path.name for f in containers[0].archives]
         assert names == ["release.rar", "release.r00", "release.r01", "release.r02"]
 
-    def test_playable_ordered_by_name(self):
+    def test_video_ordered_by_name(self):
         paths = self._paths([
             "movie.cd2.mkv", "movie.cd1.mkv",
         ])
         containers = MediaContainer.from_paths(paths)
-        names = [f.path.name for f in containers[0].playable]
+        names = [f.path.name for f in containers[0].video]
         assert names == ["movie.cd1.mkv", "movie.cd2.mkv"]
 
     def test_split_media_ordered_by_split_number(self):
@@ -512,7 +569,7 @@ class TestMixedContent:
         ])
         containers = MediaContainer.from_paths(paths)
         assert len(containers) == 1
-        assert len(containers[0].playable) == 1
+        assert len(containers[0].video) == 1
         assert len(containers[0].archives) == 2
         assert len(containers[0].artwork) == 1
         assert len(containers[0].text_files) == 1

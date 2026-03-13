@@ -37,3 +37,11 @@
 - **Advanced Regressions**: Introduced difficult regression fixtures (multiple_episodes, mixed_scrambled_and_clear, ambiguous_splits) which verified the high reliability of the right-to-left suffix peeling and 700ngest-common-prefix rules.
 - **Behavioral Pivot**: Formally deprecated the Playback phase from ARCHITECTURE.md and the CLI, focusing the tool solely on classification and extraction preparation. Verified the codebase uses standard Python lexicographical sorting to handle multi-part ordering.
 - **Developer Documentation**: Rewrote DEVELOPER_GUIDE.md (and created an HTML export) to document the explicit types, Health Flags, and Action Contexts defined in the MediaContainerProtocol and ClassifiedFileProtocol. All tests pass perfectly.
+
+## Session: DSL-Driven Parsing & Native Visual Analysis
+- **Goal**: Transition to a declarative parsing system and implement native macOS visual analysis for improved grouping of generic filenames.
+- **Declarative Parser (DSL)**: Refactored the core grouping algorithm to use a rule-based system. Baseline rules are now stored in `baked-in-rules.json`, supporting both simple regex patterns and complex functional heuristics (like mid-string sequence extraction).
+- **macOS Native Visual Analysis**: Developed a "homebrew" computer vision engine using the system `sips` tool. Implemented **Average Hashing (aHash)** for structural matching and **Color Histograms** for pictorial similarity, enabling the grouping of visually related images (e.g., `1.jpg`, `2.jpg`) without relying on filenames.
+- **Smart Naming Engine**: Implemented a "Maximal Readable Name" algorithm that derives clean container names from the Longest Common Prefix of primary media files. The engine automatically detects and preserves the dominant separator (`.`, `_`, or `-`) and strips metadata brackets.
+- **CLI & UX Refinement**: Added support for incremental verbosity (`-v`, `-vv`) and implemented a concise gallery summarization format to reduce terminal clutter while maintaining high detail on demand.
+- **Verification**: Successfully added multiple image-based fixtures and verified **184 passing tests**, confirming the robustness of the new visual and declarative modules.

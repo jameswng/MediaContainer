@@ -30,56 +30,104 @@ from managedsettings import Settings
 from .media_container import MediaContainer
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        prog="mediacontainer",
-        description="Identify, group, extract, and play media objects from a directory.",
-    )
-    parser.add_argument(
-        "directory",
-        type=Path,
-        nargs="?",
-        default=Path.cwd(),
-        help="Directory to scan (default: current directory)",
-    )
-    parser.add_argument(
-        "--dry-run", "-n",
-        action="store_true",
-        help="Show what would be done without extracting or playing",
-    )
-    
-    # Initialize Global Logger (Composition Root)
-    logger = sysloglogger
-    
-    try:
-        args = parser.parse_args(argv)
+def display_containers(media_containers: list[MediaContainer], label: str, verbosity: int, dry_run: bool) -> None:
+    """Display the identified media containers in a structured format."""
+    if not media_containers:
+        if verbosity == 0:
+            print(f"[{label}] No media containers found.\n")
+        return
 
-        directory: Path = args.directory.resolve()
-        if not directory.is_dir():
-            print(f"Error: {directory} is not a directory", file=sys.stderr)
-            sys.exit(1)
+    if verbosity == 0:
+        print(f"Found {len(media_containers)} media container(s) for '{label}':\n")
 
-        logger.log_info("mediacontainer", f"CLI started for directory: {directory}")
+    for i, mc in enumerate(media_containers, 1):
+        if verbosity > 0:
+            # Strict Object Dump Format
+            print(f"{mc.name}")
 
-        # Initialize Global Settings with injected logger
-        settings = Settings(path="~/.mediacontainer.json", logger=logger)
+            # 1. Collect Metadata Attributes (Singles)
+            # Start with stem as requested
+            singles_dict = {
+                "scrambled": mc.scrambled,
+                "unaffiliated": mc.unaffiliated,
+                "incomplete": mc.incomplete,
+                "needs_extraction": mc.needs_extraction,
+                "extraction_tool": mc.extraction_tool,
+            }
+            pa = mc.primary_archive
+            singles_dict["primary_archive"] = f"'{pa.path.name}'" if pa else None
 
-        paths = sorted(f for f in directory.iterdir() if f.is_file())
-        
-        # Group with injected dependencies
-        media_containers = MediaContainer.from_paths(paths, settings=settings, logger=logger)
+            # 2. Collect Content (Single-Value or List depending on verbosity)
+            content_lists = [
+                ("video", mc.video),
+                ("sample", mc.sample),
+                ("gallery", mc.gallery),
+                ("archives", mc.archives),
+                ("split_media", mc.split_media),
+                ("artwork", mc.artwork),
+                ("par_files", mc.par_files),
+                ("text_files", mc.text_files),
+                ("nzb", mc.nzb),
+                ("misc", mc.misc),
+            ]
 
-        if not media_containers:
-            print("No files found.")
-            sys.exit(0)
+            lists_to_print = []
+            for list_name, files in content_lists:
+                if not files:
+                    continue
 
-        print(f"Found {len(media_containers)} media container(s) in {directory.name}/\n")
+                if list_name == "gallery" and verbosity < 2:
+                    # Gallery is a "single" in -v mode, but we use bracketed format
+                    patterns = set()
+                    for f in files:
+                        p = f.path.name
+                        if f.sequence:
+                            p = p.replace(f.sequence, "#" * len(f.sequence), 1)
+                        patterns.add(p)
+                    
+                    for idx, p in enumerate(sorted(patterns)):
+                        key = "gallery" if idx == 0 else f"gallery_{idx}"
+                        singles_dict[key] = f"[ '{p}' ]"
+                else:
+                    # Other populated lists are "lists"
+                    lists_to_print.append((list_name, files))
 
-        for i, mc in enumerate(media_containers, 1):
+            # 3. Print Stem First
+            print(f"  stem: '{mc.stem}'")
+
+            # 4. Print other singles in lexical order
+            for k in sorted(singles_dict.keys()):
+                print(f"  {k}: {singles_dict[k]}")
+
+            # 5. Print Lists
+            for list_name, files in lists_to_print:
+                print(f"  {list_name} [")
+                for f in files:
+                    print(f"    '{f.path.name}'")
+                print("  ]")
+            print()
+        else:
+            # Standard Summary
             print(f"  [{i}] {mc.name}")
+
+            # Show gallery concisely
+            if mc.gallery:
+                patterns = set()
+                for f in mc.gallery:
+                    p = f.path.name
+                    if f.sequence:
+                        p = p.replace(f.sequence, "#" * len(f.sequence), 1)
+                    patterns.add(p)
+                for p in sorted(patterns):
+                    print(f"      gallery: {p}")
+
+            # Show other files
             for f in mc.files:
+                if f.file_type.name == "GALLERY":
+                    continue # Handled above
+
                 marker = "  "
-                if f.file_type.name in ("ARCHIVE", "SPLIT_ARCHIVE"):
+                if f.file_type.name in ("ARCHIVE", "MULTIPART_ARCHIVE"):
                     marker = "📦"
                 elif f.file_type.name == "VIDEO":
                     marker = "🎬"
@@ -90,15 +138,85 @@ def main(argv: list[str] | None = None) -> None:
                 print(f"      {marker} {f.path.name}  ({f.file_type.name.lower()})")
 
             if mc.needs_extraction:
-                print("      → needs extraction")
+                print(f"      → needs extraction ({mc.extraction_tool})")
             print()
 
-        if args.dry_run:
-            print("(dry run — no actions taken)")
-            return
+    if dry_run:
+        print("(dry run — no actions taken)\n")
 
-        # TODO: extraction phase
-        print("(extraction not yet implemented)")
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="mediacontainer",
+        description="Identify, group, extract, and play media objects from directories, files, or stdin.",
+    )
+    parser.add_argument(
+        "inputs",
+        type=str,
+        nargs="*",
+        help="Directories to scan, files containing path lists (e.g. .dir, .txt), or '-' for stdin.",
+    )
+    parser.add_argument(
+        "--dry-run", "-n",
+        action="store_true",
+        help="Show what would be done without extracting or playing",
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="count",
+        default=0,
+        help="Show detailed dump of media containers. Use -vv for full file lists.",
+    )
+
+    # Initialize Global Logger (Composition Root)
+    logger = sysloglogger
+
+    try:
+        args = parser.parse_args(argv)
+
+        # Determine inputs, defaulting to CWD if none and terminal is interactive
+        inputs = args.inputs
+        if not inputs:
+            if sys.stdin.isatty():
+                inputs = ["."]
+            else:
+                inputs = ["-"]
+
+        # Initialize Global Settings with injected logger
+        settings = Settings(path="~/.mediacontainer.json", logger=logger)
+
+        for input_str in inputs:
+            paths: list[Path] = []
+            label = input_str
+
+            if input_str == "-":
+                label = "stdin"
+                paths = [Path(line.strip()) for line in sys.stdin if line.strip()]
+            else:
+                p = Path(input_str)
+                if p.is_dir():
+                    label = p.resolve().name
+                    paths = sorted(f for f in p.iterdir() if f.is_file())
+                elif p.is_file():
+                    # If it's a known list extension, read lines as paths
+                    if p.suffix.lower() in (".dir", ".txt", ".lst", ".filelist"):
+                        paths = [Path(line.strip()) for line in p.read_text().splitlines() if line.strip()]
+                    else:
+                        paths = [p]
+                else:
+                    # Treat as a single path even if it doesn't exist on disk (for virtual grouping tests)
+                    paths = [p]
+
+            if not paths:
+                print(f"[{label}] No files found.\n")
+                continue
+
+            # Group with injected dependencies
+            media_containers = MediaContainer.from_paths(paths, settings=settings, logger=logger)
+
+            display_containers(media_containers, label, args.verbose, args.dry_run)
+        # TODO: extraction phase (only if not dry-run and containers found)
+        # For now, we just print the same placeholder as before if we reached here
+        # print("(extraction not yet implemented)")
 
     except Exception as e:
         logger.log_error("mediacontainer", f"Unhandled CLI exception: {e}")

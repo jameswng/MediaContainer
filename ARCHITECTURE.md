@@ -148,6 +148,8 @@ Usually there is one media container per directory, but not always.
 ```python
 class MediaContainer:
     name: str
+    lcp: str
+    stem: str  # alias to lcp
     files: list[ClassifiedFile]
 
     @classmethod
@@ -159,7 +161,7 @@ class MediaContainer:
 - **Input:** a list of Path objects
 - **Output:** a list of `MediaContainer` instances, each containing its affiliated `ClassifiedFile` entries
 - Initial classification and grouping uses filenames only (pure string logic)
-- **Filesystem access on demand:** for outlier resolution the module may access the filesystem to inspect file headers or sizes
+- **Visual Analysis Fallback**: for cases where filename heuristics are insufficient (e.g., `1.jpg`, `2.jpg`), the module performs macOS native visual fingerprinting to identify logical sets.
 - **Importable as a library** by other apps
 
 ### Filename Anatomy
@@ -176,7 +178,8 @@ stem-sample.part1.rar.001
 ```
 
 **Terminology:**
-- **stem** — the core name after all suffixes are removed; used for grouping
+- **stem** — the normalized core name (lowercase, space-separated) used for grouping
+- **raw_stem** — the unmodified core name string after suffix/sequence removal
 - **qualifier** — a descriptive suffix attached to the stem (e.g., `-sample`, `_screenshot`)
 - **volume** — multipart/volume indicator (e.g., `.part1`, `.r00`, `.vol0+1`)
 - **extension** — file type extension (e.g., `.rar`, `.avi`, `.jpg`)
@@ -197,238 +200,107 @@ Each filename is classified by extension into a `FileType`:
 - NZB: .nzb
 - OTHER: anything else — still grouped by stem affiliation
 
-### Stem Extraction
+### Stem Extraction (Rule-based Parser DSL)
 
-Iterative right-to-left peeling of recognized suffixes until none remain:
+Stems are identified by a declarative `Parser` that applies a set of ordered rules to the filename. 
 
-**Peel rules** (applied in a loop until no more match):
-- Split: `.001`–`.999`
-- Volume: `.r00`–`.r99`, `.s00`–`.s99`, `.partN`, `.part01`, `.part001`, `.vol0+1` etc.
-- Extension: `.rar`, `.zip`, `.7z`, `.avi`, `.mkv`, `.mp4`, `.jpg`, `.par2`, `.txt`, `.nfo`, `.nzb`, etc.
+**Rule Configuration (`baked-in-rules.json`):**
+Rules are defined in an external JSON file. Simple rules use regex `pattern`, while complex logic uses `function` placeholders that call internal parser methods.
 
-**Strip rules** (applied once after peeling):
-- Qualifier: `sample`, `screenshot`, `subs`, `proof`, `covers`
+**Rule Types:**
+- **Peel**: Extracts a value (e.g., volume, split, sequence) and removes it from the filename string.
+- **Strip**: Removes recognized descriptive tokens (e.g., qualifiers) from the filename string.
 
-**Normalize:**
+**Scopes:**
+- **Suffix**: The rule only matches if the pattern occurs at the end of the current filename (applied iteratively right-to-left).
+- **Global**: The rule matches anywhere in the stem (used for mid-string sequences or custom tags).
+
+**Baseline Rule Priority (Processed in order):**
+1.  **Split**: `.001` through `.999` (Suffix)
+2.  **Volume**: `.partN`, `.rNN`, `.sNN`, `.volNN+NN` (Suffix)
+3.  **Extension**: Known media and archive extensions (Suffix)
+4.  **Qualifier**: `sample`, `subs`, etc. (Suffix Strip)
+5.  **Heuristic Sequence**: Complex mid-string sequence extraction (Global Function)
+
+**Normalization:**
+After rules are applied, the remaining string is normalized:
 - Lowercase
-- Replace dots and underscores with spaces (preserve hyphens)
-
-**Examples:**
-```
-stem.avi.001          → peel .001 (split) → peel .avi (ext)       → stem: "stem"
-stem.rar.001          → peel .001 (split) → peel .rar (ext)       → stem: "stem"
-stem.part1.rar        → peel .rar (ext) → peel .part1 (volume)    → stem: "stem"
-stem.r00              → peel .r00 (volume)                         → stem: "stem"
-stem.vol0+1.par2      → peel .par2 (ext) → peel .vol0+1 (volume)  → stem: "stem"
-stem-sample.avi       → peel .avi (ext) → strip -sample (qual)     → stem: "stem"
-stem_screenshot.jpg   → peel .jpg (ext) → strip _screenshot (qual) → stem: "stem"
-front.jpg                 → peel .jpg (ext)                             → stem: "front" (accessory)
-stem.nzb              → peel .nzb (ext)                             → stem: "stem"
-```
-
-### Grouping Algorithm
-
-**Core assumption:** All files sharing a stem or similar stem are affiliated.
-
-1. Compute normalized stem for every file.
-2. Group by **longest common prefix** (the longest string that two or more stems share from the start) on normalized stems. This handles the majority of cases (95–99% accuracy target).
-3. For difficult cases where longest common prefix is insufficient, apply secondary heuristics (e.g., SequenceMatcher similarity). Edge cases will be addressed as they occur — 100% accuracy is not a goal.
-4. Generic accessory names (`front.jpg`, `back.jpg`, `cover.jpg`, `index.jpg`, etc.) attach to the dominant group. These can appear in any type of media container — video releases, image sets, etc.
-5. If only one group emerges, treat everything as one media container.
-6. **Image sets** are media containers like any other. They may include their own accessory files (front, back, cover, index, clean versions, etc.).
-7. Files that cannot be affiliated with any group go into a single catch-all **unaffiliated** media container.
-
-**Known accessory names:** front, back, cover, screen, screens, screenshot, folder, poster, thumb, fanart, banner, disc, disk, index, clean
-
-### List Assignment
-
-Once files are grouped into a media container, each file is sorted into the appropriate content list (playable, sample, artwork, archives, etc.) based on:
-
-- **Filename** — qualifiers (e.g., `-sample` → sample list), known accessory names (e.g., `front.jpg` → artwork list), file type/extension
-- **File size** — may be used to distinguish sample from playable (e.g., a small video alongside a large one)
-- **No filesystem content inspection** for list assignment
-
-### Scrambled Filename Detection
-
-When stems cannot be grouped by longest common prefix or similarity because they are obfuscated (hashes, random strings), detect and group by extension pattern instead.
-
-**Detection criteria** (all must be true for a cluster of files):
-- Stems are all the **same length**
-- Stems use a **restricted, uniform alphabet** (e.g., hex: 0-9a-f, or base64, or alphanumeric-only)
-- Stems lack typical naming structure (no word separators, no recognizable tokens)
-- Multiple files match this pattern (a single random-looking name is not enough)
-
-**Grouping rule:** When a set of files is detected as scrambled, ignore stems and group by extension pattern. E.g., a collection of `.r00`–`.r99` files with hash stems forms one multipart archive container.
-
-**Example:**
-```
-bc3eed3e69df...e1.r88    ─┐
-bd827022004a...a6.r32     │
-c01ae13de93e...91.r64     ├── all hex stems, same length, .rNN extensions
-e382220a8393...7c.r00     │   → one multipart archive media container
-f120a88beea0...33.r36    ─┘
-```
-
-### Split File Context Rules
-
-The meaning of `.001`/`.002` numeric split files depends on what they're splitting:
-
-| Pattern | Interpretation |
-|---|---|
-| `name.rar.001`, `name.rar.002` | Split archive (rar) |
-| `name.zip.001`, `name.zip.002` | Split archive (zip) |
-| `name.7z.001`, `name.7z.002` | Split archive (7z) |
-| `movie.avi.001`, `movie.avi.002` | Split media file |
-| `name.001`, `name.002` (no known ext before split) | Ambiguous — heuristic needed |
-
-### Data Model
-
-**ClassifiedFile:** path (Path), file_type (FileType), stem (str), qualifier (str|None), volume (str|None), extension (str), split (str|None)
-
-**MediaContainer:**
-
-Content:
-- **name** — the container's stem identity
-- **files** — all files in the container (flat list)
-- **playable** — videos, main playable content (action: none)
-- **sample** — sample video(s) (action: none)
-- **artwork** — front, back, cover, screenshots, etc. (action: none)
-- **archives** — all archive/multipart files (action: extract)
-- **primary_archive** — the entry point file for extraction (see Primary Archive Selection)
-- **par_files** — par/par2 files (action: none)
-- **split_media** — split media files needing stitching (action: stitch)
-- **text_files** — nfo, txt (action: none)
-- **nzb** — nzb files (action: none)
-- **misc** — everything else (action: none)
-
-Each content list has an implicit **action_needed** (noted in parentheses above). The consumer checks which lists are populated and what actions they require.
-
-Computed:
-- **extraction_tool** — which tool to invoke if extraction is needed (unrar, 7z, unzip, or None)
-
-Flags:
-- **scrambled** — filenames are obfuscated
-- **incomplete** — primary archive missing, or last split file is the same size as all others (more data expected)
-- **corrupted** — split files have inconsistent sizes (all should be equal except possibly the last)
-- **unaffiliated** — catch-all container for files that couldn't be grouped and aren't a recognized valid type on their own
-
-### Action Needed
-
-Action is a per-content-list attribute, not per-container. Each list implies what processing is required:
-
-| Content list | action | Meaning |
-|---|---|---|
-| playable, sample, artwork, par_files, text_files, nzb, misc | `none` | Directly accessible |
-| archives | `extract` | Must be extracted |
-| split_media | `stitch` | Must be concatenated |
-
-A container with both `playable` and `archives` populated has content at different readiness levels — some ready, some needing work. The consumer handles each accordingly.
-
-Note: `stitch+extract` applies when split files reassemble into an archive (e.g., `name.rar.001`) — the consumer stitches first, then extracts.
-
-### Extraction Tool
-
-Derived from the primary archive's extension:
-
-| Primary archive | extraction_tool |
-|---|---|
-| `.rar` | unrar |
-| `.zip` | unzip or 7z |
-| `.7z` | 7z |
-| `.rar.001` | TBD (needs testing) |
-| `.zip.001` | TBD (needs testing) |
-| `.7z.001` | 7z |
-
-### Primary Archive Selection
-
-The primary archive is the file a tool would be invoked on to begin extraction:
-
-| Archive type | Primary file |
-|---|---|
-| rar + r00–r99 | the `.rar` file |
-| partN.rar series | `part1.rar` (or `part01.rar`) |
-| Numeric split (.001) | the `.001` file |
-| Single .zip or .7z | that file |
-
-If no primary archive can be identified in an archive-based container, flag as **incomplete**.
-
-### Archive Health (file size heuristics)
-
-For split/multipart archives, file sizes provide health signals:
-
-- **Complete**: last split is smaller than the others (normal — final chunk is a partial)
-- **Incomplete**: last split is the same size as all others (more data expected), or primary archive is missing
-- **Corrupted**: split files have inconsistent sizes (all should be equal except possibly the last)
-
-### Ordering
-
-- **Archives/splits**: ordered by volume/split number
-- **Playable files**: ordered by name (handles CD1/CD2 naturally)
-
-### Container Assignment Rules
-
-- A file with a recognized valid type (video, image, archive, etc.) always gets a proper container, even if it's the only file
-- Files that can't be affiliated with any group *and* aren't a recognized valid type go into the single **unaffiliated** catch-all container
-- Empty input returns an empty list
+- Replace word separators (dots, underscores, brackets) with spaces
+- **Preserve Hyphens**: hyphens are treated as part of the stem (e.g., `release-grp`)
+- Trim whitespace and collapse multiple spaces
 
 ---
 
-## Deferred
+## Configuration Engine
 
-Everything below is outside the MediaContainer module and deferred to future implementation.
+`MediaContainer` uses a hybrid configuration model to manage the variety of filename combinations.
 
-### Nested Archives
-Archives may contain other archives (e.g., zip files containing rar files, or rar files containing a broken/split rar set). MediaContainer cannot detect this — it only sees filenames in a directory, not archive contents. The consumer can handle this iteratively: extract, run `from_paths()` on the extracted contents, repeat if more archives are found. May be formalized as a built-in pattern in the future.
+### 1. Default Baseline (`baked-in-rules.json`)
+The core library loads rules from `baked-in-rules.json`. This provides industry-standard handling of Scene rules, multipart archives, and common gallery formats.
 
-### Extraction / Stitching
-- Multipart archive extraction (unrar, 7z, zip)
-- Split media file stitching (concatenation)
-- Ram drive (`/Volumes/ram`) — required for extraction and stitching, no fallback
+### 2. Declarative DSL (`parser_rules`)
+Users and applications can extend or override the baseline behavior via the `parser_rules` key in the global settings (`~/.mediacontainer.json`). 
 
-### Playback (DEPRECATED)
-- Launch media player (likely mpv) with extracted/loose media files
-- Image viewer for image-set containers
-- CD1/CD2 ordering
-- Do not play container metadata files (archives, par, nfo, nzb)
+**Configuration Schema (JSON):**
+```json
+{
+  "parser_rules": [
+    {
+      "name": "rule_name",
+      "pattern": "regex_string",
+      "action": "peel | strip",
+      "scope": "suffix | global"
+    }
+  ]
+}
+```
+Custom rules are prepended to the baseline set, giving them highest priority.
 
-### Environment
-- Ram drive detection and space checking
+---
 
-### Visual Analysis
-For outlier grouping disambiguation when filename-based heuristics are insufficient. Possible approaches:
+## Grouping Algorithm
 
-- **Perceptual hashing** (pHash, dHash): generates a compact fingerprint per image/frame. Similar visuals produce similar hashes, compared via hamming distance. Fast and lightweight.
-- **Color histogram correlation**: compute RGB/HSV histograms, compare distributions. Good for detecting images from the same shoot or scene.
-- **Dominant palette extraction**: k-means clustering on pixel colors. Useful for "same photo set" detection.
-- **Keyframe extraction** (video): pull a few frames (first, middle, end) via ffmpeg, then apply any of the above image techniques to compare videos.
-- **Average luminance/contrast**: coarse but cheap — compare mean brightness and standard deviation across images.
+**Core assumption:** All files sharing a stem or similar stem are affiliated.
 
-### Declarative Rule Configuration
-Extract hardcoded stem peeling/stripping rules into a configurable, declarative format. Possible approaches:
+1.  **Longest Common Prefix**: Cluster files by normalized stems.
+2.  **Visual Clustering**: For "weak" groups (empty, numeric, or single-character stems), perform visual analysis on images.
+3.  **Accessory Attachment**: Generic accessory names (`front.jpg`, etc.) attach to the dominant group.
+4.  **Catch-all**: Unaffiliated files go into an "unaffiliated" container.
 
-- **Config-driven rules**: define peel/strip patterns in YAML, TOML, or a Python dict. A generic processor iterates and applies them.
-- **Ordered rule chains**: rules have priority/ordering, processor applies them right-to-left on the filename until no more match.
-- **Per-app overrides**: consuming apps can inject custom rules without modifying the core rule set.
+### Visual Analysis (Darwin/macOS)
+
+For image sets with non-descriptive names (e.g. `1.jpg`, `2.jpg`), the module utilizes macOS `sips` to generate visual fingerprints and histograms.
+
+**Grouping Strategies:**
+1.  **Structural Match (Average Hash)**: 
+    - Images are downsampled to 8x8 pixels.
+    - A 64-bit string is generated where each bit represents whether a pixel is above or below the average brightness.
+    - Hamming distance ≤ 10 indicates a structural match (good for resizing).
+2.  **Pictorial Match (Color Histogram)**:
+    - Images are downsampled to 32x32 pixels.
+    - A 125-bin normalized color histogram is generated (5 levels per RGB channel).
+    - Cosine similarity (correlation) ≥ 0.95 indicates a pictorial match (good for crops or related photos from the same pictorial/scene).
+
+### Container Naming (Maximal Readable Name)
+
+The `MediaContainer.name` is derived from the **unmodified Longest Common Prefix (LCP)** of the grouped files' `raw_stem` attributes.
+
+**Naming Algorithm:**
+1.  **Extract LCP**: Calculate prefix of `raw_stem` strings.
+2.  **Dominant Separator**: Identify the most frequent separator (`.`, `_`, or `-`) in the LCP.
+3.  **Cleanup**: Remove brackets, strip non-alphanumeric chars.
+4.  **Normalization**: Replace internal whitespace/separators with the dominant separator.
+5.  **Fallback**: If the LCP is empty/weak, use a generated name like `[Gallery-HASH]`.
+
+---
 
 ## Module Structure
 
 ```
 mediacontainer/
 ├── __init__.py         — core library exports
-└── media_container.py  — MediaContainer logic
-
-managedsettings/
-├── __init__.py         — settings exports
-└── settings.py         — persistent settings management
-
-sysloglogger/
-├── __init__.py         — logger exports
-└── logger.py           — native system logging utility
-```
-
-Future modules (deferred):
-```
-├── extract.py          — archive extraction, split stitching
-├── player.py           — media playback orchestration
-└── cli.py              — CLI entry point
+├── media_container.py  — MediaContainer logic
+├── parser.py           — Rule-based filename parser
+├── visual.py           — macOS native visual analysis
+└── baked-in-rules.json — baseline parsing DSL
 ```

@@ -1,96 +1,71 @@
-#!/usr/bin/env python3
 """
-# MediaContainer — Fixture Results Demonstration
+# MediaContainer — Fixture Results Visualization Script
 
 ## Calling API
-- `python3 bin/show_fixture_results.py`: Demonstrates the grouping results for
-  various test fixtures.
+- `python3 bin/show_fixture_results.py`: Scan all fixtures and show grouping results.
 
 ## Algorithmic Methodology
-- Loads filenames from `.dir` fixture files.
-- Invokes `MediaContainer.from_paths`.
-- Displays identified containers and their categorized contents.
-- **Environment-Clean Safe**: Strips non-essential environment variables at runtime.
-
-## Program Flow
-1. Sanitize the environment.
-2. Resolve project root and inject into `sys.path`.
-3. Select representative fixtures.
-4. For each fixture:
-   a. Load filenames.
-   b. Group with `MediaContainer`.
-   c. Print a structured summary.
+- Loads each fixture from `tests/fixtures/`.
+- Runs `MediaContainer.from_paths()`.
+- Prints a structured summary of identified containers and their attributes.
 """
 
-import os
 import sys
 from pathlib import Path
 
-def _clean_environment():
-    """Strips environment variables to ensure architectural compliance."""
-    keep = {"HOME", "USER", "PATH", "TERM", "SHELL", "LANG", "LC_ALL"}
-    for key in list(os.environ.keys()):
-        if key not in keep:
-            del os.environ[key]
+# Add project root to sys.path
+ROOT = Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(ROOT))
 
-# --- Environment-Clean Safe Initialization ---
-_clean_environment()
+from mediacontainer.media_container import MediaContainer
 
-# --- Self-Locating Executable ---
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+FIXTURES_DIR = ROOT / "tests" / "fixtures"
 
-from mediacontainer.media_container import MediaContainer  # noqa: E402
-
-def load_fixture(name: str) -> list[Path]:
-    path = ROOT / "tests" / "fixtures" / f"{name}.dir"
-    if not path.exists():
-        return []
-    lines = path.read_text().splitlines()
-    return [Path(line.strip()) for line in lines if line.strip() and not line.startswith("#")]
+def load_fixture(path: Path) -> list[Path]:
+    if path.suffix == ".dir":
+        return [Path(line.strip()) for line in path.read_text().splitlines() if line.strip()]
+    return sorted(f for f in path.iterdir() if f.is_file())
 
 def main():
-    fixtures = [
-        "single_rar_release",
-        "image_set",
-        "scrambled_filenames",
-        "mixed_video_and_archive"
-    ]
+    fixtures = []
+    for p in sorted(FIXTURES_DIR.iterdir()):
+        if p.suffix == ".dir":
+            fixtures.append(p)
+        elif p.is_dir() and not p.name.startswith("."):
+            fixtures.append(p)
 
-    for name in fixtures:
-        print(f"=== Fixture: {name} ===")
-        paths = load_fixture(name)
+    for fix in fixtures:
+        print(f"\n{'='*80}")
+        print(f" FIXTURE: {fix.name}")
+        print(f"{'='*80}")
+        
+        paths = load_fixture(fix)
         containers = MediaContainer.from_paths(paths)
         
         for i, mc in enumerate(containers, 1):
-            print(f"  [{i}] Container Name: '{mc.name}'")
-            if mc.scrambled:
-                print("      (Scrambled Filenames Detected)")
-            if mc.unaffiliated:
-                print("      (Unaffiliated Catch-all)")
-                
+            print(f"  [{i}] {mc.name}")
+            print(f"      Attributes: scrambled={mc.scrambled}, unaffiliated={mc.unaffiliated}, incomplete={mc.incomplete}")
+            
             categories = {
-                "🎬 Playable": mc.playable,
-                "🎞 Sample": mc.sample,
-                "🖼 Artwork": mc.artwork,
+                "🎬 Video": mc.video,
+                "🎞  Gallery": mc.gallery,
                 "📦 Archives": mc.archives,
-                "🔧 Par2": mc.par_files,
-                "✂️ Split": mc.split_media,
-                "📄 Text": mc.text_files,
-                "🏷 NZB": mc.nzb,
-                "❓ Misc": mc.misc
+                "🖼  Artwork": mc.artwork,
+                "🔧 PAR": mc.par_files,
+                "✂️  Split": mc.split_media,
+                "📝 Text": mc.text_files,
+                "🔗 NZB": mc.nzb,
+                "📄 Misc": mc.misc
             }
             
             for label, files in categories.items():
                 if files:
-                    print(f"      {label}: {len(files)} file(s)")
-                    # Print first 2 files as examples
-                    for f in files[:2]:
+                    print(f"      {label}:")
+                    for f in files:
                         print(f"        - {f.path.name}")
-                    if len(files) > 2:
-                        print(f"        - ... (+{len(files)-2} more)")
-        print("-" * 40)
+        
+        if not containers:
+            print("  (No containers identified)")
 
 if __name__ == "__main__":
     main()
