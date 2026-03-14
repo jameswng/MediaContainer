@@ -30,12 +30,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 
-@runtime_checkable
-class LoggingProtocol(Protocol):
-    """Protocol defining the expected interface for system logging."""
-    def log_error(self, ident: str, message: str) -> None: ...
-    def log_warning(self, ident: str, message: str) -> None: ...
-    def log_info(self, ident: str, message: str) -> None: ...
+from sub_projects.sysloglogger import LoggingProtocol
 
 
 class DefaultLogger:

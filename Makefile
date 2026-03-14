@@ -75,15 +75,15 @@ $(VENV)/bin/activate: pyproject.toml
 test: setup
 	@$(MAKE) version-advance
 	@echo "🧪 [TEST] Running Unit Tests (Version $$(cat VERSION))..."
-	@$(PYTEST) || { echo "❌ [FAILED] Unit tests failed."; exit 1; }
+	@export PYTHONPATH=.:$$PYTHONPATH; $(PYTEST) || { echo "❌ [FAILED] Unit tests failed."; exit 1; }
 	@echo "✅ [VERIFIED] Unit tests passed."
-	@$(MAKE) git-wip
+	@$(MAKE) wip
 
 lint: setup
 	@echo "🔍 [LINT] Running Ruff..."
 	@$(RUFF) check .
 	@echo "🔍 [TYPE] Running Mypy..."
-	@$(MYPY) mediacontainer
+	@export PYTHONPATH=.:$$PYTHONPATH; $(MYPY) mediacontainer managedsettings sub_projects
 	@echo "✅ [VERIFIED] Linting and typing passed."
 
 version-advance:

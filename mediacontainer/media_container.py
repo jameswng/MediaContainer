@@ -29,24 +29,18 @@
 
 from __future__ import annotations
 
-import dataclasses
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
-from .parser import Parser, ParseResult, SettingsProtocol
+from .parser import Parser, SettingsProtocol
 from .visual import VisualFingerprint
 
 
-@runtime_checkable
-class LoggingProtocol(Protocol):
-    """Protocol defining the expected interface for system logging."""
-    def log_error(self, ident: str, message: str) -> None: ...
-    def log_warning(self, ident: str, message: str) -> None: ...
-    def log_info(self, ident: str, message: str) -> None: ...
+from sub_projects.sysloglogger import LoggingProtocol
 
 
 class DefaultLogger:
@@ -413,30 +407,37 @@ class MediaContainer:
             histograms: dict[Path, list[float]] = {}
             for f in image_files:
                 fp = VisualFingerprint.get_fingerprint(f.path, resolution=visual_res)
-                if fp: fingerprints[f.path] = fp
+                if fp:
+                    fingerprints[f.path] = fp
 
                 hist = VisualFingerprint.get_histogram(f.path)
-                if hist: histograms[f.path] = hist
+                if hist:
+                    histograms[f.path] = hist
 
             # 3. Cluster images by visual similarity
             clusters: list[list[ClassifiedFile]] = []
             visited_paths = set()
 
             for i, f1 in enumerate(image_files):
-                if f1.path in visited_paths: continue
+                if f1.path in visited_paths:
+                    continue
 
                 fp1 = fingerprints.get(f1.path)
                 hist1 = histograms.get(f1.path)
-                if not fp1 and not hist1: continue
+                if not fp1 and not hist1:
+                    continue
 
                 # Attach visual data to f1
                 f1.visual_fingerprint = fp1
                 f1.visual_histogram = hist1
+
                 current_cluster = [f1]
                 visited_paths.add(f1.path)
 
                 for f2 in image_files[i+1:]:
-                    if f2.path in visited_paths: continue
+                    if f2.path in visited_paths:
+                        continue
+
                     fp2 = fingerprints.get(f2.path)
                     hist2 = histograms.get(f2.path)
 
@@ -514,7 +515,8 @@ class MediaContainer:
     @classmethod
     def _make_readable(cls, s: str) -> str:
         """Transform LCP into a clean, maximal readable name."""
-        if not s: return ""
+        if not s:
+            return ""
         counts = {".": s.count("."), "_": s.count("_"), "-": s.count("-")}
         best_sep = "."
         max_count = 0

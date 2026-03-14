@@ -1,0 +1,9 @@
+ensure all modules are properly separate and all interactions are adjucated by an appropriate
+   formal protocol. can this protocol be separeted into a source code file for each module? from now
+   on. each module will be a separate project under the same umberlla workspace. copy the appropriate
+   pieces of the Makfile and tests into each module, separate the cli and other apps, into an app
+   project and retain only the umbrella makefile to call each module one when necessary. make
+   checkpoint in particular should be able to checkpoint all the wip of the entire workspace. the
+   modules should not be able to do checkpoints on their own though it should still be able to wip
+   its own sectin of the workspace
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀

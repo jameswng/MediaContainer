@@ -25,7 +25,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import sysloglogger
+import sub_projects.sysloglogger as sysloglogger
 from managedsettings import Settings
 from .media_container import MediaContainer
 

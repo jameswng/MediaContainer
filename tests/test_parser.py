@@ -3,8 +3,7 @@
 """
 
 from pathlib import Path
-import pytest
-from mediacontainer.parser import Parser, Rule
+from mediacontainer.parser import Parser
 
 class TestParser:
 

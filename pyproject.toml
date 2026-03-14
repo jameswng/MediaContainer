@@ -16,4 +16,5 @@ dev = [
 mediacontainer = "mediacontainer.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["mediacontainer*", "managedsettings*", "sysloglogger*"]
+where = ["."]
+include = ["mediacontainer*", "managedsettings*", "sub-projects.sysloglogger*"]

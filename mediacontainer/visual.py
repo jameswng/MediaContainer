@@ -58,7 +58,8 @@ class VisualFingerprint:
         except Exception:
             return None
         finally:
-            if tmp_path.exists(): tmp_path.unlink()
+            if tmp_path.exists():
+                tmp_path.unlink()
 
     @staticmethod
     def get_histogram(path: Path) -> list[float] | None:
@@ -96,7 +97,8 @@ class VisualFingerprint:
         except Exception:
             return None
         finally:
-            if tmp_path.exists(): tmp_path.unlink()
+            if tmp_path.exists():
+                tmp_path.unlink()
 
     @staticmethod
     def calculate_distance(h1: str, h2: str) -> int:

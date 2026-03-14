@@ -1,26 +1,17 @@
-# Session Summary: Visual Intelligence Refinement & Membership Heuristics
+# Session Summary - March 14, 2026
 
-## Full Session Recomposition
 > **Full Session Recomposition**: `python3 bin/recompose_history.py`
 
 ## Current Truth
-- **Architecture**: Transitions from hardcoded logic to a **Declarative Parser (DSL)** stored in `baked-in-rules.json`. Employs a hybrid configuration model (baked-in baseline + user overrides).
-- **Visual Intelligence**: Implements macOS-native visual analysis using `sips`. Uses **Average Hash (aHash)** for structural matching and **Color Histograms** for pictorial similarity.
-- **Membership Heuristics**: Trusts consistent numerical/bracketed naming (e.g. `001.jpg`, `002.jpg`) to skip visual analysis. Triggers visual verification only on "messy" patterns (mixed padding, collisions, pattern drift).
-- **Configurability**: Visual thresholds and **Hashing Resolution** (default 8x8) are now stored in the DSL and overridable via CLI flags (`-vt`, `-vr`) or global settings.
-- **Reporting**: In `-vv` mode, image files display their visual signature `[hash, density]` for transparency and debugging.
-- **Verification**: ✅ 195/195 tests passing.
+- **Architecture**: Decoupled, protocol-based logging with `sysloglogger` as a standalone sub-project.
+- **Default Mode**: Development (with unit tests and mock-based logging verification).
+- **Verification**: All 198 tests passed; `mypy` and `ruff` verified.
 
-## Latest Session (Summary)
-- **Visual Analysis Triggers**:
-    - Refactored `MediaContainer._perform_visual_analysis` to trigger on naming inconsistencies (mixed padding, collisions, pattern drift).
-    - Implemented **Membership Heuristics** to trust consistent numerical/bracketed patterns, avoiding redundant visual scans.
-- **Configurable DSL & Tuning**:
-    - Moved thresholds to `baked-in-rules.json` and added support for configurable hashing resolution (e.g. 16x16 for 256-bit hashes).
-    - Added CLI flags `--visual-thresholds` (`-vt`) and `--visual-resolution` (`-vr`) for manual tuning.
-- **CLI Excellence**:
-    - Added `--no-visual` (`-nv`) and `--force-visual` (`-fv`) options.
-    - Implemented **Visual Metadata Reporting** in `-vv` mode displaying `[hex_hash, bin_density]`.
-- **Regression Suite**:
-    - Added `ambiguous_lena`, `stem_mess`, and `bracketed_gallery` fixtures.
-    - Verified 195 tests passing across all naming, grouping, and visual modules.
+## Accomplishments
+- **Sub-Project Refactor**: Relocated `sysloglogger` to `sub_projects/sysloglogger/` to ensure proper architectural separation.
+- **Protocol Definition**: Established a formal `LoggingProtocol` in `sub_projects/sysloglogger/protocol.py` to adjudicate all logging interactions.
+- **Dependency Inversion**: Updated `mediacontainer` and `managedsettings` to depend on the `LoggingProtocol` rather than a concrete implementation.
+- **Localized Build System**: Created a dedicated `Makefile` for the `sysloglogger` sub-project, supporting independent testing and linting.
+- **Enhanced Verification**: Implemented a comprehensive unit test suite for `sysloglogger` using mocks to verify system logger integration.
+- **Root Integration**: Updated the root `Makefile` and `pyproject.toml` to recognize and validate the new sub-project structure.
+- **Code Quality**: Resolved several linting issues (unused imports, one-line statements) across the codebase.

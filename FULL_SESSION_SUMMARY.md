@@ -65,3 +65,22 @@
 - **Verification & Regressions**:
     - Added multiple complex regression fixtures (`ambiguous_lena`, `stem_mess`, `bracketed_gallery`) to verify surgical splitting and merging behavior in messy naming scenarios.
     - Verified **195 passing tests**, ensuring total system stability across all naming and visual modules.
+
+## Session: sysloglogger Sub-Project Refactor & Formal Protocol (v0.0.80+)
+- **Goal**: Refactor the sysloglogger module into a standalone sub-project with a strict protocol-based interface and independent build system.
+- **Sub-Project Refactor**:
+    - Relocated the sysloglogger module to `sub_projects/sysloglogger/`, establishing it as a logically separate component of the MediaContainer ecosystem.
+    - Created a localized `Makefile` for the sub-project, supporting independent `setup`, `test`, and `lint` targets.
+- **Formal Logging Protocol**:
+    - Established a formal `LoggingProtocol` in `sub_projects/sysloglogger/protocol.py` using `typing.Protocol` and `runtime_checkable`.
+    - This protocol now serves as the authoritative interface for all system logging interactions, enabling structural typing and dependency inversion.
+- **Dependency Inversion & Integration**:
+    - Updated the `mediacontainer` and `managedsettings` modules to depend exclusively on the `LoggingProtocol` from the `sysloglogger` sub-project.
+    - Removed redundant local protocol definitions, centralizing the logging interface within the sub-project.
+    - Updated the root `pyproject.toml` and `Makefile` to recognize and validate the new sub-project structure, including automated linting and type-checking of the `sub_projects` directory.
+- **Enhanced Verification**:
+    - Implemented a dedicated unit test suite for the sysloglogger module (`sub_projects/sysloglogger/tests/test_logger.py`).
+    - Utilized `unittest.mock` to verify correct interaction with the native macOS `syslog` daemon, ensuring that log messages are dispatched with the appropriate identity and priority.
+    - Successfully verified all **198 passing tests**, including the new sub-project tests and existing system-wide regressions.
+- **Code Quality**:
+    - Resolved several linting issues (unused imports, multiple statements on one line) to maintain high standards for code readability and maintainability across the entire project.

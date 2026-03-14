@@ -122,4 +122,4 @@ To maintain a clean and decoupled domain model, detailed implementation logic is
 
 - **[MediaContainer Module](mediacontainer/ARCHITECTURE.md)**: Logic for file grouping, classification, stem parsing, and visual analysis.
 - **[ManagedSettings Module](managedsettings/ARCHITECTURE.md)**: Logic for dictionary-backed configuration and persistence.
-- **[SyslogLogger Module](sysloglogger/ARCHITECTURE.md)**: Logic for out-of-band system logging.
+- **[SyslogLogger Module](sub_projects/sysloglogger/ARCHITECTURE.md)**: Logic for out-of-band system logging.
