@@ -25,7 +25,7 @@ ALL_SOURCES := $(shell find mediacontainer -name "*.py")
 ALL_TESTS   := $(shell find tests -name "*.py")
 
 # --- Targets ---
-.PHONY: all clean setup test lint version-advance commit help start stop restart git-wip
+.PHONY: all clean setup test lint version-advance commit help start stop restart wip push
 
 all: setup test lint
 
@@ -95,7 +95,7 @@ version-advance:
 	echo "$$major.$$minor.$$patch" > VERSION
 
 # 🛠️ Git WIP (Shadow Commit)
-git-wip:
+wip:
 	@echo "💾 Creating shadow WIP commit..."
 	@git add .
 	@last_msg=$$(git log -1 --pretty=%B 2>/dev/null); \
@@ -113,6 +113,12 @@ commit:
 	@git commit --amend -m "$(MSG) (v$$(cat VERSION))"
 	@echo "✅ Finalized v$$(cat VERSION)."
 
+# 🚀 Push changes to remote
+push:
+	@echo "🚀 Pushing changes to remote..."
+	@git push
+	@echo "✅ Changes pushed."
+
 help:
 	@echo "mediacontainer Build System"
 	@echo "---------------"
@@ -122,3 +128,5 @@ help:
 	@echo "make lint     - Run linting and type checks"
 	@echo "make clean    - Remove all build and cache artifacts"
 	@echo "make commit MSG='msg' - Finalize changes and version"
+	@echo "make wip      - Create a shadow WIP commit"
+	@echo "make push     - Push changes to the remote repository"
